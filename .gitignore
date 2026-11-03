@@ -62,3 +62,14 @@ nunit-*.xml
 .vs/
 # Local developer settings (GitHub OAuth client id)
 appsettings.local.json
+
+# MSIX app packages
+**/AppPackages/
+AppxPackages/
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+
+# Code signing certificates
+*.pfx

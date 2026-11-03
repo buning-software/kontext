@@ -12,9 +12,9 @@
   <p align="center">
     Mission control for AI-assisted development on Windows: GitHub issues, isolated git worktrees and embedded Claude Code terminals in one app.
     <br />
-    <a href="https://github.com/jellebuning/kontext/issues">Report Bug</a>
+    <a href="https://github.com/buning-software/kontext/issues">Report Bug</a>
     ·
-    <a href="https://github.com/jellebuning/kontext/issues">Request Feature</a>
+    <a href="https://github.com/buning-software/kontext/issues">Request Feature</a>
   </p>
 </div>
 
@@ -35,6 +35,7 @@
         <li><a href="#requirements">Requirements</a></li>
         <li><a href="#build-and-run">Build and run</a></li>
         <li><a href="#test">Test</a></li>
+        <li><a href="#release">Release</a></li>
       </ul>
     </li>
     <li><a href="#contributing">Contributing</a></li>
@@ -114,6 +115,17 @@ To run only the unit tests:
 Get-ChildItem tests -Recurse -Filter *.UnitTests.csproj | ForEach-Object { dotnet test $_.FullName -c Release }
 ```
 
+### Release
+
+Publishing a GitHub release tagged like `v1.2.3` runs the tests, then builds a signed, self-contained x64 MSIX and attaches it to the release together with `Kontext.cer`, the public certificate. The tag sets the package version. ARM64 is not built because the embedded terminal control only ships x64 binaries.
+
+One-time setup:
+
+* Signing uses the `CERTIFICATE_BASE64` (the `.pfx`, base64 encoded) and `CERTIFICATE_PASSWORD` secrets. They are organization secrets of `buning-software`, shared with the other Buning Software apps, and this repository has to be allowed to use them (organization Settings, Secrets and variables, Actions). The certificate subject must equal `Publisher` in `src/Kontext/Package.appxmanifest` (`CN=BuningSoftware`). To create a new certificate, for example when it expires, use `generate_certificate.ps1` in the [Surveil repository](https://github.com/buning-software/surveil), update both organization secrets, and never commit the `.pfx`.
+* Set the repository variable `KONTEXT_GITHUB_CLIENT_ID`. An installed MSIX is read-only, so the client id has to be built in; the release fails without it.
+
+To install a release, first trust `Kontext.cer` once (open it, choose Install Certificate, Local Machine, Trusted People), then open the `.msix`. Kontext still keeps its data under `%LOCALAPPDATA%\Kontext`: the package turns off file redirection so your clones and worktrees stay visible to Explorer, terminals and IDEs.
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -142,13 +154,13 @@ Distributed under the GNU Affero General Public License v3.0 License. See `LICEN
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/jellebuning/kontext.svg?style=for-the-badge
-[contributors-url]: https://github.com/jellebuning/kontext/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/jellebuning/kontext.svg?style=for-the-badge
-[forks-url]: https://github.com/jellebuning/kontext/network/members
-[stars-shield]: https://img.shields.io/github/stars/jellebuning/kontext.svg?style=for-the-badge
-[stars-url]: https://github.com/jellebuning/kontext/stargazers
-[issues-shield]: https://img.shields.io/github/issues/jellebuning/kontext.svg?style=for-the-badge
-[issues-url]: https://github.com/jellebuning/kontext/issues
-[license-shield]: https://img.shields.io/github/license/jellebuning/kontext.svg?style=for-the-badge
-[license-url]: https://github.com/jellebuning/kontext/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/buning-software/kontext.svg?style=for-the-badge
+[contributors-url]: https://github.com/buning-software/kontext/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/buning-software/kontext.svg?style=for-the-badge
+[forks-url]: https://github.com/buning-software/kontext/network/members
+[stars-shield]: https://img.shields.io/github/stars/buning-software/kontext.svg?style=for-the-badge
+[stars-url]: https://github.com/buning-software/kontext/stargazers
+[issues-shield]: https://img.shields.io/github/issues/buning-software/kontext.svg?style=for-the-badge
+[issues-url]: https://github.com/buning-software/kontext/issues
+[license-shield]: https://img.shields.io/github/license/buning-software/kontext.svg?style=for-the-badge
+[license-url]: https://github.com/buning-software/kontext/blob/main/LICENSE
