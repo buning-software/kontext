@@ -1,13 +1,18 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using Kontext.Presentation;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 
 namespace Kontext.Views;
 
 public sealed partial class SignInView : UserControl
 {
+    private const string CopyGlyph = "";
+    private const string CopiedGlyph = "";
+
     public static readonly DependencyProperty ViewModelProperty = DependencyProperty.Register(
         nameof(ViewModel),
         typeof(ShellViewModel),
@@ -37,6 +42,30 @@ public sealed partial class SignInView : UserControl
         }
 
         signIn.Bindings?.Update();
+    }
+
+    private async void CopyCodeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(ViewModel?.UserCode))
+        {
+            return;
+        }
+
+        try
+        {
+            var package = new DataPackage();
+            package.SetText(ViewModel.UserCode);
+            Clipboard.SetContent(package);
+            Clipboard.Flush();
+        }
+        catch (Exception ex) when (ex is COMException or InvalidOperationException)
+        {
+            return;
+        }
+
+        CopyCodeIcon.Glyph = CopiedGlyph;
+        await Task.Delay(TimeSpan.FromSeconds(1.5));
+        CopyCodeIcon.Glyph = CopyGlyph;
     }
 
     private async void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

@@ -27,10 +27,22 @@
 
         <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasDeviceCode, Mode=OneWay}">
             <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Enter this code on GitHub:" />
-            <TextBlock
-                IsTextSelectionEnabled="True"
-                Style="{StaticResource TitleLargeTextBlockStyle}"
-                Text="{x:Bind ViewModel.UserCode, Mode=OneWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    IsTextSelectionEnabled="True"
+                    Style="{StaticResource TitleLargeTextBlockStyle}"
+                    Text="{x:Bind ViewModel.UserCode, Mode=OneWay}" />
+                <Button
+                    x:Name="CopyCodeButton"
+                    Margin="0,5,0,0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="Copy code to clipboard"
+                    Click="CopyCodeButton_Click"
+                    ToolTipService.ToolTip="Copy to clipboard">
+                    <FontIcon x:Name="CopyCodeIcon" FontSize="16" Glyph="&#xE8C8;" />
+                </Button>
+            </StackPanel>
             <HyperlinkButton
                 Padding="0"
                 Content="Open github.com/login/device"
