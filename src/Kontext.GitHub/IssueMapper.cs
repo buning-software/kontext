@@ -6,7 +6,7 @@ namespace Kontext.GitHub;
 
 internal static class IssueMapper
 {
-    public static GitHubIssue? Map(Issue issue, RepositoryRef? requestedRepository)
+    public static GitHubIssue? Map(Issue issue, RepositoryRef? requestedRepository, string host = GitHubHosts.Default)
     {
         if (issue.PullRequest is not null)
         {
@@ -14,8 +14,8 @@ internal static class IssueMapper
         }
 
         var repository = issue.Repository is { } source
-            ? new RepositoryRef(source.Owner.Login, source.Name)
-            : requestedRepository ?? RepositoryFromIssueUrl(issue.HtmlUrl);
+            ? new RepositoryRef(source.Owner.Login, source.Name, Host: host)
+            : requestedRepository ?? RepositoryFromIssueUrl(issue.HtmlUrl, host);
 
         return new GitHubIssue(
             repository,
@@ -29,9 +29,9 @@ internal static class IssueMapper
             issue.UpdatedAt ?? issue.CreatedAt);
     }
 
-    private static RepositoryRef RepositoryFromIssueUrl(string htmlUrl)
+    private static RepositoryRef RepositoryFromIssueUrl(string htmlUrl, string host)
     {
         var segments = new Uri(htmlUrl).AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return new RepositoryRef(segments[0], segments[1]);
+        return new RepositoryRef(segments[0], segments[1], Host: host);
     }
 }

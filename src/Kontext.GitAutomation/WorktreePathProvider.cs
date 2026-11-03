@@ -11,12 +11,10 @@ internal sealed class WorktreePathProvider(GitAutomationOptions options) : IWork
 
         var folder = branchName[(branchName.LastIndexOf('/') + 1)..];
 
-        return Path.Combine(options.WorktreesRoot, Safe(repository.Owner), Safe(repository.Name), Safe(folder));
-    }
+        var root = GitHubHosts.IsDefault(repository.Host)
+            ? options.WorktreesRoot
+            : Path.Combine(options.WorktreesRoot, PathSegment.Safe(repository.Host));
 
-    private static string Safe(string segment)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        return string.Concat(segment.Select(character => invalid.Contains(character) ? '_' : character));
+        return Path.Combine(root, PathSegment.Safe(repository.Owner), PathSegment.Safe(repository.Name), PathSegment.Safe(folder));
     }
 }

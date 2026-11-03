@@ -12,9 +12,9 @@
   <p align="center">
     Mission control for AI-assisted development on Windows: GitHub issues, isolated git worktrees and embedded Claude Code terminals in one app.
     <br />
-    <a href="https://github.com/jellebuning/kontext/issues">Report Bug</a>
+    <a href="https://github.com/buning-software/kontext/issues">Report Bug</a>
     ·
-    <a href="https://github.com/jellebuning/kontext/issues">Request Feature</a>
+    <a href="https://github.com/buning-software/kontext/issues">Request Feature</a>
   </p>
 </div>
 
@@ -35,6 +35,7 @@
         <li><a href="#requirements">Requirements</a></li>
         <li><a href="#build-and-run">Build and run</a></li>
         <li><a href="#test">Test</a></li>
+        <li><a href="#release">Release</a></li>
       </ul>
     </li>
     <li><a href="#contributing">Contributing</a></li>
@@ -54,7 +55,7 @@ Kontext lets you work on all your repositories' issues at once and leave Claude 
 * **One worktree per issue.** Selecting an issue clones the repository when needed, creates a `features/{number}-{title}` branch in its own worktree, and opens an empty Claude Code session there. Nothing is asked of you, and nothing is shared between issues.
 * **Know when Claude needs you.** Claude Code hooks report whether a session is working or waiting for input; the circle in the sidebar changes accordingly.
 * **Resume where you left off.** Sessions are remembered per issue and continued with `claude --resume` after a restart.
-* **Open it anywhere.** Open a worktree in File Explorer, Windows Terminal or Visual Studio from the issue's header.
+* **Open it anywhere.** Open a worktree in File Explorer, Windows Terminal or its solution file (`.slnx` or `.sln`, in whatever app is registered for it) from the issue's header.
 * **Clean up when done.** For a closed issue, Clear session removes the worktree and its branch.
 * **Modern Architecture:** Built with SOLID principles and design patterns for maximum maintainability: a modular monolith with compiler-enforced module boundaries.
 * **Native Windows look.** WinUI 3 with Mica, light and dark themes, and a terminal with zoom and mouse support.
@@ -81,7 +82,11 @@ Before beginning, ensure that your development environment is properly configure
 * [.NET 10 SDK](https://dotnet.microsoft.com/download)
 * [Git for Windows](https://git-scm.com/download/win) on your `PATH`
 * The [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude`) on your `PATH`
-* A GitHub personal access token with the `repo` scope; Kontext asks for it on first start and stores it in Windows Credential Locker
+* A GitHub account; you sign in with it on first start (GitHub device flow) and Kontext stores the resulting token in Windows Credential Locker
+
+### Configuration
+
+Sign-in needs a GitHub OAuth App with Device Flow enabled. For local development, copy `src/Kontext/appsettings.local.example.json` to `src/Kontext/appsettings.local.json` (git-ignored) and set `GitHub:ClientId` to the app's client id (the client id is not a secret). CI writes the repository variable `KONTEXT_GITHUB_CLIENT_ID` into `appsettings.json` before building. Organisations that restrict OAuth apps must approve the app before their repositories and issues become available.
 
 ### Build and run
 
@@ -98,7 +103,28 @@ Stop a running instance before building again, because it locks the build output
 dotnet test Kontext.slnx -c Release
 ```
 
-Warnings are treated as errors. The tests include integration tests that run real `git` against a temporary repository.
+Warnings are treated as errors. Tests are split by kind, one project per kind and module:
+
+* `Kontext.*.UnitTests` are fast and in-memory: no filesystem, processes or network.
+* `Kontext.*.IntegrationTests` touch the real world: the filesystem, a loopback HTTP server, or real `git` against a temporary repository.
+* `Kontext.ArchitectureTests` and `Kontext.CompositionTests` check the module boundaries and the dependency injection wiring.
+
+To run only the unit tests:
+
+```powershell
+Get-ChildItem tests -Recurse -Filter *.UnitTests.csproj | ForEach-Object { dotnet test $_.FullName -c Release }
+```
+
+### Release
+
+Publishing a GitHub release tagged like `v1.2.3` runs the tests, then builds a signed, self-contained x64 MSIX and attaches it to the release together with `Kontext.cer`, the public certificate. The tag sets the package version. ARM64 is not built because the embedded terminal control only ships x64 binaries.
+
+One-time setup:
+
+* Signing uses the `CERTIFICATE_BASE64` (the `.pfx`, base64 encoded) and `CERTIFICATE_PASSWORD` secrets. They are organization secrets of `buning-software`, shared with the other Buning Software apps, and this repository has to be allowed to use them (organization Settings, Secrets and variables, Actions). The certificate subject must equal `Publisher` in `src/Kontext/Package.appxmanifest` (`CN=BuningSoftware`). To create a new certificate, for example when it expires, use `generate_certificate.ps1` in the [Surveil repository](https://github.com/buning-software/surveil), update both organization secrets, and never commit the `.pfx`.
+* Set the repository variable `KONTEXT_GITHUB_CLIENT_ID`. An installed MSIX is read-only, so the client id has to be built in; the release fails without it.
+
+To install a release, first trust `Kontext.cer` once (open it, choose Install Certificate, Local Machine, Trusted People), then open the `.msix`. Kontext still keeps its data under `%LOCALAPPDATA%\Kontext`: the package turns off file redirection so your clones and worktrees stay visible to Explorer, terminals and IDEs.
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -128,13 +154,13 @@ Distributed under the GNU Affero General Public License v3.0 License. See `LICEN
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/jellebuning/kontext.svg?style=for-the-badge
-[contributors-url]: https://github.com/jellebuning/kontext/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/jellebuning/kontext.svg?style=for-the-badge
-[forks-url]: https://github.com/jellebuning/kontext/network/members
-[stars-shield]: https://img.shields.io/github/stars/jellebuning/kontext.svg?style=for-the-badge
-[stars-url]: https://github.com/jellebuning/kontext/stargazers
-[issues-shield]: https://img.shields.io/github/issues/jellebuning/kontext.svg?style=for-the-badge
-[issues-url]: https://github.com/jellebuning/kontext/issues
-[license-shield]: https://img.shields.io/github/license/jellebuning/kontext.svg?style=for-the-badge
-[license-url]: https://github.com/jellebuning/kontext/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/buning-software/kontext.svg?style=for-the-badge
+[contributors-url]: https://github.com/buning-software/kontext/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/buning-software/kontext.svg?style=for-the-badge
+[forks-url]: https://github.com/buning-software/kontext/network/members
+[stars-shield]: https://img.shields.io/github/stars/buning-software/kontext.svg?style=for-the-badge
+[stars-url]: https://github.com/buning-software/kontext/stargazers
+[issues-shield]: https://img.shields.io/github/issues/buning-software/kontext.svg?style=for-the-badge
+[issues-url]: https://github.com/buning-software/kontext/issues
+[license-shield]: https://img.shields.io/github/license/buning-software/kontext.svg?style=for-the-badge
+[license-url]: https://github.com/buning-software/kontext/blob/main/LICENSE

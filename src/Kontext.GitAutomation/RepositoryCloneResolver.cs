@@ -27,10 +27,10 @@ internal sealed class RepositoryCloneResolver(
         var root = await inspector.FindRepositoryRootAsync(cloned, cancellationToken)
             ?? throw new GitAutomationException($"'{cloned}' is not inside a git repository.");
 
-        var remotes = await inspector.GetGitHubRemotesAsync(root, cancellationToken);
+        var remotes = await inspector.GetGitHubRemotesAsync(root, repository.Host, cancellationToken);
         if (!remotes.Any(remote => string.Equals(remote.FullName, repository.FullName, StringComparison.OrdinalIgnoreCase)))
         {
-            var found = remotes.Count == 0 ? "has no GitHub remote" : $"is a clone of {string.Join(", ", remotes.Select(remote => remote.FullName))}";
+            var found = remotes.Count == 0 ? $"has no {repository.Host} remote" : $"is a clone of {string.Join(", ", remotes.Select(remote => remote.FullName))}";
             throw new GitAutomationException($"'{root}' {found}, not {repository.FullName}.");
         }
 

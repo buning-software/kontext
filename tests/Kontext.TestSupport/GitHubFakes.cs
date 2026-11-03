@@ -44,8 +44,6 @@ public sealed class FakeGitHubService : IGitHubService
 
     public int Calls { get; private set; }
 
-    public GitHubUser? CurrentUser => null;
-
     public void Complete(int callIndex, IReadOnlyList<GitHubIssue> issues) => _pending[callIndex].SetResult(issues);
 
     public Task<IReadOnlyList<GitHubIssue>> GetIssuesAsync(RepositoryRef? repository = null, CancellationToken cancellationToken = default)
@@ -69,19 +67,34 @@ public sealed class FakeGitHubService : IGitHubService
 
     public GitHubUser SignedInAs { get; set; } = new("octocat", "The Octocat", new Uri("https://github.com/octocat"));
 
+    public GitHubUser EnterpriseSignedInAs { get; set; } = new("corpuser", "Corp User", new Uri("https://github.corp.com/corpuser"), "github.corp.com");
+
+    public List<string> HostsTried { get; } = [];
+
+    public List<string> SignedOutHosts { get; } = [];
+
     public Exception? AuthenticationFailsWith { get; set; }
 
     public List<string> TokensTried { get; } = [];
 
     public int SignOuts { get; private set; }
 
-    public Task<GitHubUser> AuthenticateAsync(string accessToken, CancellationToken cancellationToken = default)
+    public Action<string>? OnAuthenticate { get; set; }
+
+    public Task<GitHubUser> AuthenticateAsync(string host, string accessToken, CancellationToken cancellationToken = default)
     {
+        HostsTried.Add(host);
         TokensTried.Add(accessToken);
-        return AuthenticationFailsWith is null ? Task.FromResult(SignedInAs) : Task.FromException<GitHubUser>(AuthenticationFailsWith);
+        OnAuthenticate?.Invoke(accessToken);
+        var user = GitHubHosts.IsDefault(host) ? SignedInAs : EnterpriseSignedInAs with { Host = host };
+        return AuthenticationFailsWith is null ? Task.FromResult(user) : Task.FromException<GitHubUser>(AuthenticationFailsWith);
     }
 
-    public void SignOut() => SignOuts++;
+    public void SignOut(string host)
+    {
+        SignOuts++;
+        SignedOutHosts.Add(host);
+    }
 
 
     public Task<GitHubIssue> GetIssueAsync(RepositoryRef repository, int number, CancellationToken cancellationToken = default)
@@ -91,21 +104,68 @@ public sealed class FakeGitHubService : IGitHubService
     }
 }
 
-public sealed class FakeTokenStore(string? saved = null) : IGitHubTokenStore
+public sealed class FakeTokenStore(string? saved = null, string? savedEnterprise = null, string enterpriseHost = "github.corp.com") : IGitHubTokenStore
 {
     public string? Saved { get; private set; } = saved;
 
+    public string? SavedEnterprise { get; private set; } = savedEnterprise;
+
+    public string? EnterpriseHost { get; private set; } = savedEnterprise is null ? null : enterpriseHost;
+
     public int Clears { get; private set; }
+
+    public int EnterpriseClears { get; private set; }
 
     public Exception? LoadFailsWith { get; set; }
 
-    public string? Load() => LoadFailsWith is null ? Saved : throw LoadFailsWith;
-
-    public void Save(string token) => Saved = token;
-
-    public void Clear()
+    public string? Load(string host)
     {
-        Saved = null;
-        Clears++;
+        if (LoadFailsWith is not null)
+        {
+            throw LoadFailsWith;
+        }
+
+        return GitHubHosts.IsDefault(host) ? Saved : string.Equals(host, EnterpriseHost, StringComparison.OrdinalIgnoreCase) ? SavedEnterprise : null;
+    }
+
+    public void Save(string host, string token)
+    {
+        if (GitHubHosts.IsDefault(host))
+        {
+            Saved = token;
+            return;
+        }
+
+        EnterpriseHost = host;
+        SavedEnterprise = token;
+    }
+
+    public void Clear(string host)
+    {
+        if (GitHubHosts.IsDefault(host))
+        {
+            Saved = null;
+            Clears++;
+            return;
+        }
+
+        SavedEnterprise = null;
+        EnterpriseHost = null;
+        EnterpriseClears++;
+    }
+
+    public string? FindEnterpriseHost() => EnterpriseHost;
+}
+
+public sealed class FakeEnterprisePrompt : IEnterpriseServerPrompt
+{
+    public EnterpriseCredentials? Answer { get; set; } = new(new GitHubServer("github.corp.com"), "ghp_corporate");
+
+    public int Asked { get; private set; }
+
+    public Task<EnterpriseCredentials?> AskAsync()
+    {
+        Asked++;
+        return Task.FromResult(Answer);
     }
 }

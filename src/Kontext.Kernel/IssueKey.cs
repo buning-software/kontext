@@ -2,14 +2,15 @@ namespace Kontext.Kernel;
 
 public readonly record struct IssueKey
 {
-    public IssueKey(string repositoryFullName, int number)
+    public IssueKey(string repositoryFullName, int number, string host = GitHubHosts.Default)
     {
         RepositoryFullName = repositoryFullName.ToUpperInvariant();
         Number = number;
+        Host = host.ToUpperInvariant();
     }
 
     public IssueKey(RepositoryRef repository, int number)
-        : this(repository.FullName, number)
+        : this(repository.FullName, number, repository.Host)
     {
     }
 
@@ -17,5 +18,7 @@ public readonly record struct IssueKey
 
     public int Number { get; }
 
-    public override string ToString() => $"{RepositoryFullName}#{Number}";
+    public string Host { get; }
+
+    public override string ToString() => GitHubHosts.IsDefault(Host) ? $"{RepositoryFullName}#{Number}" : $"{Host}/{RepositoryFullName}#{Number}";
 }

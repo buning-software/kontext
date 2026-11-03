@@ -3,22 +3,26 @@ using Kontext.Kernel;
 
 namespace Kontext.GitAutomation;
 
-internal static partial class GitRemoteUrlParser
+internal static class GitRemoteUrlParser
 {
-    public static RepositoryRef? Parse(string remoteUrl)
+    public static RepositoryRef? Parse(string remoteUrl, string host = GitHubHosts.Default)
     {
-        var match = UrlForm().Match(remoteUrl.Trim());
+        var escaped = Regex.Escape(host);
+        var text = remoteUrl.Trim();
+
+        var match = Regex.Match(
+            text,
+            $@"^(?:https?|git|ssh)://(?:[^@/]+@)?(?:www\.)?{escaped}(?::\d+)?/(?<owner>[^/]+)/(?<name>[^/]+?)(?:\.git)?/?$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
         if (!match.Success)
         {
-            match = ScpForm().Match(remoteUrl.Trim());
+            match = Regex.Match(
+                text,
+                $@"^(?:[^@/]+@)?{escaped}:(?<owner>[^/]+)/(?<name>[^/]+?)(?:\.git)?/?$",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
-        return match.Success ? new RepositoryRef(match.Groups["owner"].Value, match.Groups["name"].Value) : null;
+        return match.Success ? new RepositoryRef(match.Groups["owner"].Value, match.Groups["name"].Value, Host: host) : null;
     }
-
-    [GeneratedRegex(@"^(?:https?|git|ssh)://(?:[^@/]+@)?(?:www\.)?github\.com(?::\d+)?/(?<owner>[^/]+)/(?<name>[^/]+?)(?:\.git)?/?$", RegexOptions.IgnoreCase)]
-    private static partial Regex UrlForm();
-
-    [GeneratedRegex(@"^(?:[^@/]+@)?github\.com:(?<owner>[^/]+)/(?<name>[^/]+?)(?:\.git)?/?$", RegexOptions.IgnoreCase)]
-    private static partial Regex ScpForm();
 }

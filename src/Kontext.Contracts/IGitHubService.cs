@@ -5,11 +5,9 @@ namespace Kontext.Contracts;
 
 public interface IGitHubService
 {
-    GitHubUser? CurrentUser { get; }
+    Task<GitHubUser> AuthenticateAsync(string host, string accessToken, CancellationToken cancellationToken = default);
 
-    Task<GitHubUser> AuthenticateAsync(string accessToken, CancellationToken cancellationToken = default);
-
-    void SignOut();
+    void SignOut(string host);
 
     Task<IReadOnlyList<GitHubIssue>> GetIssuesAsync(RepositoryRef? repository = null, CancellationToken cancellationToken = default);
 

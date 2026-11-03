@@ -17,7 +17,7 @@ internal sealed class JsonRepositoryCloneStore(GitAutomationOptions options) : I
 
         lock (_gate)
         {
-            return Load().GetValueOrDefault(repository.FullName);
+            return Load().GetValueOrDefault(repository.DisplayName);
         }
     }
 
@@ -27,8 +27,8 @@ internal sealed class JsonRepositoryCloneStore(GitAutomationOptions options) : I
         {
             return Load().Keys
                 .Select(name => name.Split('/'))
-                .Where(parts => parts is [{ Length: > 0 }, { Length: > 0 }])
-                .Select(parts => new RepositoryRef(parts[0], parts[1]))
+                .Select(ToRepository)
+                .OfType<RepositoryRef>()
                 .ToList();
         }
     }
@@ -41,12 +41,20 @@ internal sealed class JsonRepositoryCloneStore(GitAutomationOptions options) : I
         lock (_gate)
         {
             var clones = Load();
-            clones[repository.FullName] = localPath;
+            clones[repository.DisplayName] = localPath;
 
             Directory.CreateDirectory(options.StateDirectory);
             File.WriteAllText(_filePath, JsonSerializer.Serialize(clones, JsonOptions));
         }
     }
+
+    // Keys are "owner/name" for github.com (the original format) and "host/owner/name" for any other server.
+    private static RepositoryRef? ToRepository(string[] parts) => parts switch
+    {
+        [{ Length: > 0 } owner, { Length: > 0 } name] => new RepositoryRef(owner, name),
+        [{ Length: > 0 } host, { Length: > 0 } owner, { Length: > 0 } name] => new RepositoryRef(owner, name, Host: host),
+        _ => null,
+    };
 
     private Dictionary<string, string> Load()
     {

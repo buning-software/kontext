@@ -52,7 +52,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
 
     public string Title => Item?.Title ?? string.Empty;
 
-    public string RepositoryName => Item?.Issue.Repository.FullName ?? string.Empty;
+    public string RepositoryName => Item?.Issue.Repository.DisplayName ?? string.Empty;
 
     public string NumberText => Item?.NumberText ?? string.Empty;
 

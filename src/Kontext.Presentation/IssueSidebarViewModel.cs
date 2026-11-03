@@ -171,7 +171,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     {
         var visible = _all.Where(item => IssueSearch.Matches(item.Issue, SearchText)).ToList();
 
-        var groups = IssueGrouper.Group(visible, item => item.Issue.Repository.FullName, item => item.Issue.UpdatedAt);
+        var groups = IssueGrouper.Group(visible, item => item.Issue.Repository.DisplayName, item => item.Issue.UpdatedAt);
 
         Groups.Clear();
         foreach (var group in groups)

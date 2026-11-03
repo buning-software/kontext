@@ -23,7 +23,7 @@ public class CompositionTests
         var root = Path.Combine(Path.GetTempPath(), "kontext-composition");
 
         var services = new ServiceCollection()
-            .AddKontextGitHub()
+            .AddKontextGitHub(new GitHubOptions(null))
             .AddKontextGitAutomation(new GitAutomationOptions(root, Path.Combine(root, "worktrees"), Path.Combine(root, "repos")))
             .AddKontextTerminalHost()
             .AddKontextClaude(new ClaudeOptions(Path.Combine(root, ".claude")))
@@ -33,6 +33,8 @@ public class CompositionTests
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IGitHubTokenStore>(new FakeTokenStore());
+        services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
+        services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
         services.AddSingleton<IUiDispatcher, ImmediateDispatcher>();
         services.AddSingleton<IConfirmation, FakeConfirmation>();
         services.AddSingleton<ITerminalSessionService, FakeTerminalService>();
@@ -46,6 +48,7 @@ public class CompositionTests
     private static readonly Type[] Contracts =
     [
         typeof(IGitHubService),
+        typeof(IGitHubDeviceLogin),
         typeof(IWorkspaceProvisioner),
         typeof(IExistingWorkspaceFinder),
         typeof(IRepositoryCloneStore),

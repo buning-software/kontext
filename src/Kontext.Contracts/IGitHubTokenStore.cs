@@ -2,9 +2,11 @@ namespace Kontext.Contracts;
 
 public interface IGitHubTokenStore
 {
-    string? Load();
+    string? Load(string host);
 
-    void Save(string token);
+    void Save(string host, string token);
 
-    void Clear();
+    void Clear(string host);
+
+    string? FindEnterpriseHost();
 }

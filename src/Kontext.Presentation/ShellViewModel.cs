@@ -6,52 +6,91 @@ using Kontext.Kernel;
 
 namespace Kontext.Presentation;
 
-public sealed partial class ShellViewModel(IGitHubService gitHub, IGitHubTokenStore tokenStore, WorkspaceViewModel workspace) : ObservableObject
+public sealed partial class ShellViewModel(
+    IGitHubService gitHub,
+    IGitHubDeviceLogin deviceLogin,
+    IGitHubTokenStore tokenStore,
+    IEnterpriseServerPrompt enterprisePrompt,
+    WorkspaceViewModel workspace) : ObservableObject
 {
     public WorkspaceViewModel Workspace { get; } = workspace;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(SignedInText))]
+    [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(SignedInText), nameof(GitHubStatusText), nameof(HasGitHubAccount), nameof(HasNoGitHubAccount))]
+    [NotifyCanExecuteChangedFor(nameof(SignInCommand))]
     public partial GitHubUser? User { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(EnterpriseSignedInText), nameof(EnterpriseStatusText), nameof(HasEnterpriseAccount), nameof(HasNoEnterpriseAccount))]
+    [NotifyCanExecuteChangedFor(nameof(SignInEnterpriseCommand))]
+    public partial GitHubUser? EnterpriseUser { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowSignIn))]
     public partial bool IsStarting { get; set; } = true;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SignInCommand))]
-    public partial string Token { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SignInCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SignInCommand), nameof(SignInEnterpriseCommand))]
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string? ErrorMessage { get; set; }
 
-    public bool IsSignedIn => User is not null;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeviceCode))]
+    public partial string? UserCode { get; set; }
 
-    public bool IsSignedOut => User is null;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DeviceCodePrompt), nameof(VerificationLinkText))]
+    public partial Uri? VerificationUrl { get; set; }
+
+    public bool HasDeviceCode => !string.IsNullOrEmpty(UserCode);
+
+    public string DeviceCodePrompt => VerificationUrl is null ? string.Empty : $"Enter this code on {VerificationUrl.Authority}:";
+
+    public string VerificationLinkText => VerificationUrl is null ? string.Empty : $"Open {VerificationUrl.Authority}{VerificationUrl.AbsolutePath}";
+
+    public bool IsSignedIn => User is not null || EnterpriseUser is not null;
+
+    public bool IsSignedOut => !IsSignedIn;
 
     public bool ShowSignIn => IsSignedOut && !IsStarting;
+
+    public bool HasGitHubAccount => User is not null;
+
+    public bool HasNoGitHubAccount => User is null;
+
+    public bool HasEnterpriseAccount => EnterpriseUser is not null;
+
+    public bool HasNoEnterpriseAccount => EnterpriseUser is null;
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
     public string SignedInText => User is null ? string.Empty : $"Signed in as {User.Name ?? User.Login} (@{User.Login})";
+
+    public string EnterpriseSignedInText => EnterpriseUser is null ? string.Empty : $"Signed in to {EnterpriseUser.Host} as {EnterpriseUser.Name ?? EnterpriseUser.Login} (@{EnterpriseUser.Login})";
+
+    public string GitHubStatusText => User is null ? "Not signed in" : SignedInText;
+
+    public string EnterpriseStatusText => EnterpriseUser is null ? "Not signed in" : EnterpriseSignedInText;
 
     [RelayCommand]
     private async Task InitializeAsync()
     {
         try
         {
-            var savedToken = tokenStore.Load();
-            if (savedToken is null)
+            var signedIn = await SignInWithSavedTokenAsync(GitHubHosts.Default, "GitHub");
+
+            if (tokenStore.FindEnterpriseHost() is { } enterpriseHost)
             {
-                return;
+                signedIn |= await SignInWithSavedTokenAsync(enterpriseHost, $"GitHub Enterprise ({enterpriseHost})");
             }
 
-            await SignInWithSavedTokenAsync(savedToken);
+            if (signedIn)
+            {
+                Workspace.Sidebar.RefreshCommand.Execute(null);
+            }
         }
         finally
         {
@@ -59,22 +98,30 @@ public sealed partial class ShellViewModel(IGitHubService gitHub, IGitHubTokenSt
         }
     }
 
-    private async Task SignInWithSavedTokenAsync(string savedToken)
+    private async Task<bool> SignInWithSavedTokenAsync(string host, string accountName)
     {
+        var savedToken = tokenStore.Load(host);
+        if (savedToken is null)
+        {
+            return false;
+        }
+
         IsBusy = true;
         try
         {
-            User = await gitHub.AuthenticateAsync(savedToken);
-            Workspace.Sidebar.RefreshCommand.Execute(null);
+            ShowUser(await gitHub.AuthenticateAsync(host, savedToken));
+            return true;
         }
         catch (AuthenticationFailedException)
         {
-            tokenStore.Clear();
-            ErrorMessage = "Your saved GitHub token is no longer valid. Please sign in again.";
+            tokenStore.Clear(host);
+            AddError($"Your saved {accountName} sign-in is no longer valid. Please sign in again.");
+            return false;
         }
         catch (KontextException ex)
         {
-            ErrorMessage = ex.Message;
+            AddError(ex.Message);
+            return false;
         }
         finally
         {
@@ -82,18 +129,52 @@ public sealed partial class ShellViewModel(IGitHubService gitHub, IGitHubTokenSt
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanSignIn))]
-    private async Task SignInAsync()
+    [RelayCommand(IncludeCancelCommand = true, CanExecute = nameof(CanSignIn))]
+    private async Task SignInAsync(CancellationToken cancellationToken)
     {
         ErrorMessage = null;
         IsBusy = true;
         try
         {
-            var token = Token.Trim();
-            User = await gitHub.AuthenticateAsync(token);
-            tokenStore.Save(token);
-            Token = string.Empty;
-            Workspace.Sidebar.RefreshCommand.Execute(null);
+            var challenge = await deviceLogin.StartAsync(GitHubServer.GitHub, cancellationToken);
+            UserCode = challenge.UserCode;
+            VerificationUrl = challenge.VerificationUri;
+
+            var token = await deviceLogin.WaitForAccessTokenAsync(challenge, cancellationToken);
+            await CompleteSignInAsync(GitHubHosts.Default, token, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (KontextException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            UserCode = null;
+            VerificationUrl = null;
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand(IncludeCancelCommand = true, CanExecute = nameof(CanSignInEnterprise))]
+    private async Task SignInEnterpriseAsync(CancellationToken cancellationToken)
+    {
+        var credentials = await enterprisePrompt.AskAsync();
+        if (credentials is null)
+        {
+            return;
+        }
+
+        ErrorMessage = null;
+        IsBusy = true;
+        try
+        {
+            await CompleteSignInAsync(credentials.Server.Host, credentials.Token, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (KontextException ex)
         {
@@ -105,16 +186,79 @@ public sealed partial class ShellViewModel(IGitHubService gitHub, IGitHubTokenSt
         }
     }
 
-    [RelayCommand]
-    private void SignOut()
+    private async Task CompleteSignInAsync(string host, string token, CancellationToken cancellationToken)
     {
-        gitHub.SignOut();
-        tokenStore.Clear();
-        Workspace.Sidebar.Clear();
-        Workspace.IsSettingsOpen = false;
-        ErrorMessage = null;
-        User = null;
+        ShowUser(await gitHub.AuthenticateAsync(host, token, cancellationToken));
+        tokenStore.Save(host, token);
+        Workspace.Sidebar.RefreshCommand.Execute(null);
     }
 
-    private bool CanSignIn() => !IsBusy && !string.IsNullOrWhiteSpace(Token);
+    [RelayCommand]
+    private void CancelSignIn()
+    {
+        SignInCancelCommand.Execute(null);
+        SignInEnterpriseCancelCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void SignOut() => SignOutOf(GitHubHosts.Default, SignInCancelCommand);
+
+    [RelayCommand]
+    private void SignOutEnterprise()
+    {
+        var host = EnterpriseUser?.Host ?? tokenStore.FindEnterpriseHost();
+        if (host is null)
+        {
+            SignInEnterpriseCancelCommand.Execute(null);
+            return;
+        }
+
+        SignOutOf(host, SignInEnterpriseCancelCommand);
+    }
+
+    private void SignOutOf(string host, System.Windows.Input.ICommand cancelSignIn)
+    {
+        cancelSignIn.Execute(null);
+        UserCode = null;
+        VerificationUrl = null;
+        gitHub.SignOut(host);
+        tokenStore.Clear(host);
+        ErrorMessage = null;
+
+        if (GitHubHosts.IsDefault(host))
+        {
+            User = null;
+        }
+        else
+        {
+            EnterpriseUser = null;
+        }
+
+        if (IsSignedIn)
+        {
+            Workspace.Sidebar.RefreshCommand.Execute(null);
+            return;
+        }
+
+        Workspace.Sidebar.Clear();
+        Workspace.IsSettingsOpen = false;
+    }
+
+    private void ShowUser(GitHubUser user)
+    {
+        if (GitHubHosts.IsDefault(user.Host))
+        {
+            User = user;
+        }
+        else
+        {
+            EnterpriseUser = user;
+        }
+    }
+
+    private void AddError(string message) => ErrorMessage = string.IsNullOrEmpty(ErrorMessage) ? message : $"{ErrorMessage} {message}";
+
+    private bool CanSignIn() => !IsBusy && User is null;
+
+    private bool CanSignInEnterprise() => !IsBusy && EnterpriseUser is null;
 }
