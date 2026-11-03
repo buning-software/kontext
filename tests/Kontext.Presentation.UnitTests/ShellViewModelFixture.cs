@@ -13,6 +13,8 @@ public abstract class ShellViewModelFixture
 
     protected FakeTokenStore Tokens { get; private set; } = null!;
 
+    protected FakeEnterprisePrompt EnterprisePrompt { get; private set; } = null!;
+
     protected IssueSidebarViewModel Sidebar { get; private set; } = null!;
 
     protected ShellViewModel Shell { get; private set; } = null!;
@@ -28,16 +30,17 @@ public abstract class ShellViewModelFixture
         _autoStart.Dispose();
     }
 
-    protected void Build(string? savedToken)
+    protected void Build(string? savedToken, string? savedEnterpriseToken = null)
     {
         var tracker = new InMemoryIssueWorkTracker();
         var coordinator = new FakeCoordinator();
         GitHub = new FakeGitHubService { Issues = [Issues.Create(4, "Add notifications", "acme/memento")] };
-        Tokens = new FakeTokenStore(savedToken);
+        Tokens = new FakeTokenStore(savedToken, savedEnterpriseToken);
+        EnterprisePrompt = new FakeEnterprisePrompt();
         DeviceLogin = new FakeGitHubDeviceLogin();
         _autoStart = new SelectionAutoStart(coordinator, tracker, new InMemoryIssueSessionRegistry(), TimeProvider.System, AutoStartOptions.Default);
         Sidebar = new IssueSidebarViewModel(GitHub, tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(GitHub), TimeProvider.System);
         _detail = new IssueDetailViewModel(coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart);
-        Shell = new ShellViewModel(GitHub, DeviceLogin, Tokens, new WorkspaceViewModel(Sidebar, _detail, _autoStart));
+        Shell = new ShellViewModel(GitHub, DeviceLogin, Tokens, EnterprisePrompt, new WorkspaceViewModel(Sidebar, _detail, _autoStart));
     }
 }

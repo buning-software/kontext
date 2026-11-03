@@ -28,9 +28,12 @@ public sealed class FakeGitHubDeviceLogin : IGitHubDeviceLogin
 
     public void Grant(string? token = null) => _pendingToken!.SetResult(token ?? Token);
 
-    public Task<DeviceCodeChallenge> StartAsync(CancellationToken cancellationToken = default)
+    public List<GitHubServer?> ServersStarted { get; } = [];
+
+    public Task<DeviceCodeChallenge> StartAsync(GitHubServer? server = null, CancellationToken cancellationToken = default)
     {
         Started++;
+        ServersStarted.Add(server);
         return StartFailsWith is null ? Task.FromResult(Challenge) : Task.FromException<DeviceCodeChallenge>(StartFailsWith);
     }
 

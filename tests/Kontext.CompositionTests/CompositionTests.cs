@@ -33,6 +33,8 @@ public class CompositionTests
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IGitHubTokenStore>(new FakeTokenStore());
+        services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
+        services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
         services.AddSingleton<IUiDispatcher, ImmediateDispatcher>();
         services.AddSingleton<IConfirmation, FakeConfirmation>();
         services.AddSingleton<ITerminalSessionService, FakeTerminalService>();

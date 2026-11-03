@@ -42,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<XamlRootProvider>();
         services.AddSingleton<IConfirmation, ContentDialogConfirmation>();
         services.AddSingleton<IGitHubTokenStore, CredentialLockerTokenStore>();
+        services.AddSingleton<IEnterpriseServerPrompt, ContentDialogEnterprisePrompt>();
 
         services.AddSingleton<IUiDispatcher>(_ => new DispatcherQueueDispatcher(DispatcherQueue.GetForCurrentThread()));
 

@@ -27,7 +27,7 @@ public static class IssueSearch
         }
 
         return Contains(issue.Title, word)
-            || Contains(issue.Repository.FullName, word)
+            || Contains(issue.Repository.DisplayName, word)
             || Contains(issue.Author, word)
             || issue.Labels.Any(label => Contains(label, word));
     }
