@@ -24,7 +24,8 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
         IConfirmation confirmation,
         IWorkspaceOpener opener,
         IIssueSessionRegistry registry,
-        SelectionAutoStart autoStart)
+        SelectionAutoStart autoStart,
+        GitChangesViewModel gitChanges)
     {
         _coordinator = coordinator;
         _clearer = clearer;
@@ -32,6 +33,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
         _opener = opener;
         _registry = registry;
         _autoStart = autoStart;
+        GitChanges = gitChanges;
 
         _registry.Changed += OnSessionChanged;
         _autoStart.PropertyChanged += OnAutoStartChanged;
@@ -41,10 +43,16 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
     public partial IssueItemViewModel? Item { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowTerminalTab), nameof(VisibleSession))]
-    public partial bool ShowIssueTab { get; set; }
+    [NotifyPropertyChangedFor(nameof(ShowTerminalTab), nameof(ShowGitTab), nameof(ShowIssueTab), nameof(VisibleSession))]
+    public partial DetailTab SelectedTab { get; set; }
 
-    public bool ShowTerminalTab => !ShowIssueTab;
+    public bool ShowTerminalTab => SelectedTab == DetailTab.Terminal;
+
+    public bool ShowGitTab => SelectedTab == DetailTab.Git;
+
+    public bool ShowIssueTab => SelectedTab == DetailTab.Issue;
+
+    public GitChangesViewModel GitChanges { get; }
 
     public bool HasSelection => Item is not null;
 
@@ -120,7 +128,10 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
         _registry.Changed -= OnSessionChanged;
         _autoStart.PropertyChanged -= OnAutoStartChanged;
         UnsubscribeFrom(Item);
+        GitChanges.Dispose();
     }
+
+    partial void OnSelectedTabChanged(DetailTab value) => SyncGitChanges();
 
     partial void OnItemChanged(IssueItemViewModel? oldValue, IssueItemViewModel? newValue)
     {
@@ -208,8 +219,22 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
         }
     }
 
+    // The Git tab only exists for an issue with a worktree, and the changes are polled only while that tab is shown.
+    private void SyncGitChanges()
+    {
+        if (ShowGitTab && !HasWorkspace)
+        {
+            SelectedTab = DetailTab.Terminal;
+            return;
+        }
+
+        GitChanges.WorktreePath = WorktreePath;
+        GitChanges.IsActive = ShowGitTab;
+    }
+
     private void Refresh()
     {
+        SyncGitChanges();
         OnPropertyChanged(string.Empty);
         ResumeCommand.NotifyCanExecuteChanged();
         OpenInCommand.NotifyCanExecuteChanged();

@@ -14,8 +14,11 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     private readonly IExistingWorkspaceFinder _existingWorkspaces;
     private readonly IWorkspaceIssues _workspaceIssues;
     private readonly IHiddenRepositoryStore _hiddenRepositories;
+    private readonly ICollapsedRepositoryStore _collapsedRepositories;
+    private readonly ISessionStore _sessions;
     private readonly TimeProvider _clock;
     private readonly HashSet<string> _hidden;
+    private readonly HashSet<string> _collapsed;
     private readonly LatestOnly _loads = new();
     private readonly Dictionary<string, RepositoryGroupViewModel> _groupsByName = new(StringComparer.OrdinalIgnoreCase);
 
@@ -29,6 +32,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         IExistingWorkspaceFinder existingWorkspaces,
         IWorkspaceIssues workspaceIssues,
         IHiddenRepositoryStore hiddenRepositories,
+        ICollapsedRepositoryStore collapsedRepositories,
+        ISessionStore sessions,
         TimeProvider clock)
     {
         _gitHub = gitHub;
@@ -36,8 +41,11 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _existingWorkspaces = existingWorkspaces;
         _workspaceIssues = workspaceIssues;
         _hiddenRepositories = hiddenRepositories;
+        _collapsedRepositories = collapsedRepositories;
+        _sessions = sessions;
         _clock = clock;
         _hidden = new HashSet<string>(hiddenRepositories.Load(), StringComparer.OrdinalIgnoreCase);
+        _collapsed = new HashSet<string>(collapsedRepositories.Load(), StringComparer.OrdinalIgnoreCase);
 
         _tracker.Changed += OnTrackerChanged;
     }
@@ -204,6 +212,20 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         ApplyFilter();
     }
 
+    private void OnGroupExpandedChanged(RepositoryGroupViewModel group)
+    {
+        if (group.IsExpanded)
+        {
+            _collapsed.Remove(group.Name);
+        }
+        else
+        {
+            _collapsed.Add(group.Name);
+        }
+
+        _collapsedRepositories.Save(_collapsed);
+    }
+
     private void MarkExistingWorkspaces(IReadOnlyList<ExistingWorkspace> workspaces)
     {
         foreach (var workspace in workspaces)
@@ -212,6 +234,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
             {
                 continue;
             }
+
+            item.HasSavedSession = _sessions.Find(workspace.Issue) is not null;
 
             var status = _tracker.StateOf(workspace.Issue).Status;
             var closed = item.Issue.IsClosed;
@@ -241,7 +265,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         {
             if (!_groupsByName.TryGetValue(group.Repository, out var viewModel))
             {
-                viewModel = new RepositoryGroupViewModel(group.Repository, group.Items);
+                viewModel = new RepositoryGroupViewModel(group.Repository, group.Items, !_collapsed.Contains(group.Repository), OnGroupExpandedChanged);
                 _groupsByName[group.Repository] = viewModel;
             }
             else
@@ -287,6 +311,11 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         }
 
         item.State = e.State;
+
+        if (e.State.Status == IssueWorkStatus.NotStarted)
+        {
+            item.HasSavedSession = false;
+        }
 
         if (item.Issue.IsClosed && e.State.Status == IssueWorkStatus.NotStarted)
         {

@@ -18,6 +18,7 @@ public class IssueDetailViewModelTests
     private InMemoryIssueWorkTracker _tracker = null!;
     private FakeTimeProvider _clock = null!;
     private SelectionAutoStart _autoStart = null!;
+    private FakeWorkspaceChanges _workspaceChanges = null!;
     private IssueDetailViewModel _detail = null!;
 
     [SetUp]
@@ -31,7 +32,9 @@ public class IssueDetailViewModelTests
         _tracker = new InMemoryIssueWorkTracker();
         _clock = new FakeTimeProvider();
         _autoStart = new SelectionAutoStart(_coordinator, _tracker, new InMemoryIssueSessionRegistry(), _clock, new AutoStartOptions(TimeSpan.FromSeconds(1)));
-        _detail = new IssueDetailViewModel(_coordinator, _clearer, _confirmation, _opener, _registry, _autoStart);
+        _workspaceChanges = new FakeWorkspaceChanges();
+        var gitChanges = new GitChangesViewModel(_workspaceChanges, _clock, new GitChangesOptions(TimeSpan.FromSeconds(3)));
+        _detail = new IssueDetailViewModel(_coordinator, _clearer, _confirmation, _opener, _registry, _autoStart, gitChanges);
     }
 
     [TearDown]
@@ -161,18 +164,39 @@ public class IssueDetailViewModelTests
     }
 
     [Test]
-    public void ShowsTheTerminalTabByDefaultAndHidesTheTerminalWhileTheIssueTabIsShown()
+    public void StartsOnTheTerminalTab()
     {
-        var item = Item();
+        Assert.That(_detail.SelectedTab, Is.EqualTo(DetailTab.Terminal));
+        Assert.That(_detail.ShowTerminalTab, Is.True);
+    }
+
+    [TestCase(DetailTab.Terminal)]
+    [TestCase(DetailTab.Git)]
+    [TestCase(DetailTab.Issue)]
+    public void OnlyTheSelectedTabIsShown(DetailTab tab)
+    {
+        _detail.Item = Item(path: @"C:\wt");
+
+        _detail.SelectedTab = tab;
+
+        Assert.That(_detail.ShowTerminalTab, Is.EqualTo(tab == DetailTab.Terminal));
+        Assert.That(_detail.ShowGitTab, Is.EqualTo(tab == DetailTab.Git));
+        Assert.That(_detail.ShowIssueTab, Is.EqualTo(tab == DetailTab.Issue));
+    }
+
+    [TestCase(DetailTab.Issue)]
+    [TestCase(DetailTab.Git)]
+    public void HidesTheTerminalWhileAnotherTabIsShown(DetailTab other)
+    {
+        var item = Item(path: @"C:\wt");
         _detail.Item = item;
         var session = new FakeTerminalSession(TerminalSessionId.New());
         _registry.Register(item.Key, session);
 
         Assert.That(_detail.ShowTerminalTab, Is.True);
-        Assert.That(_detail.ShowIssueTab, Is.False);
         Assert.That(_detail.VisibleSession, Is.SameAs(session));
 
-        _detail.ShowIssueTab = true;
+        _detail.SelectedTab = other;
 
         Assert.That(_detail.ShowTerminalTab, Is.False);
         Assert.That(_detail.VisibleSession, Is.Null, "the native terminal ignores an ancestor being collapsed, so it must be told to hide");
@@ -180,15 +204,70 @@ public class IssueDetailViewModelTests
     }
 
     [Test]
-    public void AnnouncesTheTerminalVisibilityChangeWhenTheTabChanges()
+    public void AnnouncesTheTabVisibilityChangesWhenTheTabChanges()
     {
         var changed = new List<string?>();
         _detail.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
-        _detail.ShowIssueTab = true;
+        _detail.SelectedTab = DetailTab.Git;
 
         Assert.That(changed, Does.Contain(nameof(IssueDetailViewModel.VisibleSession)));
         Assert.That(changed, Does.Contain(nameof(IssueDetailViewModel.ShowTerminalTab)));
+        Assert.That(changed, Does.Contain(nameof(IssueDetailViewModel.ShowGitTab)));
+        Assert.That(changed, Does.Contain(nameof(IssueDetailViewModel.ShowIssueTab)));
+    }
+
+    [Test]
+    public void ActivatesGitChangesWithTheWorktreeOnlyOnTheGitTab()
+    {
+        _detail.Item = Item(path: @"C:\wt");
+
+        Assert.That(_detail.GitChanges.WorktreePath, Is.EqualTo(@"C:\wt"));
+        Assert.That(_detail.GitChanges.IsActive, Is.False, "nothing is polled while the terminal is shown");
+
+        _detail.SelectedTab = DetailTab.Git;
+        Assert.That(_detail.GitChanges.IsActive, Is.True);
+
+        _detail.SelectedTab = DetailTab.Terminal;
+        Assert.That(_detail.GitChanges.IsActive, Is.False);
+
+        _detail.SelectedTab = DetailTab.Issue;
+        Assert.That(_detail.GitChanges.IsActive, Is.False);
+    }
+
+    [Test]
+    public void FallsBackToTheTerminalWhenTheSelectedIssueHasNoWorktree()
+    {
+        _detail.Item = Item(path: @"C:\wt");
+        _detail.SelectedTab = DetailTab.Git;
+
+        _detail.Item = Item();
+
+        Assert.That(_detail.SelectedTab, Is.EqualTo(DetailTab.Terminal));
+        Assert.That(_detail.GitChanges.IsActive, Is.False);
+    }
+
+    [Test]
+    public void GivesGitChangesNoWorktreeWhenTheSelectedIssueHasNone()
+    {
+        _detail.Item = Item(path: @"C:\wt");
+
+        _detail.Item = Item();
+
+        Assert.That(_detail.GitChanges.WorktreePath, Is.Null);
+    }
+
+    [Test]
+    public void FollowsTheWorktreeOfTheNewlySelectedIssueWhileOnTheGitTab()
+    {
+        _detail.Item = Item(path: @"C:\wt\one");
+        _detail.SelectedTab = DetailTab.Git;
+
+        _detail.Item = Item(path: @"C:\wt\two");
+
+        Assert.That(_detail.SelectedTab, Is.EqualTo(DetailTab.Git));
+        Assert.That(_detail.GitChanges.WorktreePath, Is.EqualTo(@"C:\wt\two"));
+        Assert.That(_detail.GitChanges.IsActive, Is.True);
     }
 
     [Test]

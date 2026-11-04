@@ -52,4 +52,54 @@ public class IssueItemViewModelTests
         Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.Running));
         Assert.That(changed, Does.Contain(nameof(IssueItemViewModel.Status)));
     }
+
+    [Test]
+    public void ShowsAnOpenReadyIssueWithASavedSessionAsNeedingInput()
+    {
+        var item = Item(IssueWorkStatus.Ready, closed: false);
+
+        item.HasSavedSession = true;
+
+        Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.NeedsInput));
+        Assert.That(item.StatusText, Is.EqualTo("Needs input"));
+    }
+
+    [Test]
+    public void ShowsAReadyIssueWithoutASavedSessionAsReady()
+    {
+        var item = Item(IssueWorkStatus.Ready, closed: false);
+
+        Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.Ready));
+    }
+
+    [Test]
+    public void KeepsTheStateOfAnIssueWhoseSavedSessionHasEnded()
+    {
+        var issue = Issues.Create(4, "Add notifications", "acme/memento");
+        var item = new IssueItemViewModel(issue, new IssueWorkState(IssueWorkStatus.Ready, "b", @"C:\wt", SessionEnded: true), Now) { HasSavedSession = true };
+
+        Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.Ready));
+    }
+
+    [Test]
+    public void StillShowsAClosedIssueWithASavedSessionAsDone()
+    {
+        var item = Item(IssueWorkStatus.Ready, closed: true);
+
+        item.HasSavedSession = true;
+
+        Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.Done));
+    }
+
+    [Test]
+    public void TellsWhenASavedSessionChangesWhatIsShown()
+    {
+        var item = Item(IssueWorkStatus.Ready, closed: false);
+        var changed = new List<string?>();
+        item.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        item.HasSavedSession = true;
+
+        Assert.That(changed, Does.Contain(nameof(IssueItemViewModel.Status)).And.Contain(nameof(IssueItemViewModel.StatusText)));
+    }
 }

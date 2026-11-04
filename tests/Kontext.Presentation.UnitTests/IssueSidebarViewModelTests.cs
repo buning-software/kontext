@@ -13,13 +13,18 @@ public class IssueSidebarViewModelTests
     private InMemoryHiddenRepositoryStore _hiddenStore = null!;
     private IssueSidebarViewModel _sidebar = null!;
 
-    private IssueSidebarViewModel CreateSidebarWith(InMemoryHiddenRepositoryStore hiddenStore) =>
-        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
+    private InMemoryCollapsedRepositoryStore _collapsedStore = null!;
+    private FakeSessionStore _sessionStore = null!;
+
+    private IssueSidebarViewModel CreateSidebarWith(InMemoryHiddenRepositoryStore hiddenStore, InMemoryCollapsedRepositoryStore? collapsedStore = null) =>
+        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, collapsedStore ?? _collapsedStore, _sessionStore, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
 
     [SetUp]
     public void CreateSidebar()
     {
         _hiddenStore = new InMemoryHiddenRepositoryStore();
+        _collapsedStore = new InMemoryCollapsedRepositoryStore();
+        _sessionStore = new FakeSessionStore();
         _tracker = new InMemoryIssueWorkTracker();
         _gitHub = new FakeGitHubService();
         _finder = new FakeExistingWorkspaceFinder();
@@ -105,6 +110,69 @@ public class IssueSidebarViewModelTests
         _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/gallery").IsVisible = false;
 
         Assert.That(_hiddenStore.Hidden, Is.EquivalentTo(Expect.Seq("acme/gallery")));
+    }
+
+    [Test]
+    public async Task ShowsEveryRepositoryExpandedAtFirst()
+    {
+        await Refresh();
+
+        Assert.That(_sidebar.Groups.Select(group => group.IsExpanded), Has.All.True);
+    }
+
+    [Test]
+    public async Task RemembersARepositoryThatWasCollapsed()
+    {
+        await Refresh();
+
+        _sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded = false;
+
+        Assert.That(_collapsedStore.Collapsed, Is.EquivalentTo(Expect.Seq("acme/memento")));
+    }
+
+    [Test]
+    public async Task ForgetsARepositoryThatWasExpandedAgain()
+    {
+        await Refresh();
+        var group = _sidebar.Groups.Single(candidate => candidate.Name == "acme/memento");
+        group.IsExpanded = false;
+
+        group.IsExpanded = true;
+
+        Assert.That(_collapsedStore.Collapsed, Is.Empty);
+    }
+
+    [Test]
+    public async Task DoesNotSaveWhenTheStateDidNotChange()
+    {
+        await Refresh();
+
+        _sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded = true;
+
+        Assert.That(_collapsedStore.Saves, Is.Zero);
+    }
+
+    [Test]
+    public async Task StartsWithTheRepositoriesTheStoreSaysAreCollapsed()
+    {
+        using var sidebar = CreateSidebarWith(_hiddenStore, new InMemoryCollapsedRepositoryStore("acme/memento"));
+
+        await sidebar.RefreshCommand.ExecuteAsync(null);
+
+        Assert.That(sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded, Is.False);
+        Assert.That(sidebar.Groups.Single(group => group.Name == "acme/gallery").IsExpanded, Is.True);
+    }
+
+    [Test]
+    public async Task KeepsARepositoryCollapsedWhileFilteringAndComingBack()
+    {
+        await Refresh();
+        _sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded = false;
+
+        _sidebar.SearchText = "Galleries";
+        _sidebar.SearchText = string.Empty;
+
+        Assert.That(_sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded, Is.False);
     }
 
     [Test]
@@ -266,6 +334,36 @@ public class IssueSidebarViewModelTests
         _sidebar.SearchText = string.Empty;
 
         Assert.That(_sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded, Is.False);
+    }
+
+    [Test]
+    public async Task ShowsAWorktreeWithASavedSessionAsNeedingInputButStillLetsItResume()
+    {
+        var key = new IssueKey("acme/memento", 4);
+        _finder.Found.Add(new ExistingWorkspace(new RepositoryRef("acme", "memento"), 4, new WorktreeInfo(@"C:\wt\4", "kontext/4-add-notifications", "abc", IsMain: false)));
+        _sessionStore.Save(new StoredSession(key, TerminalSessionId.New(), @"C:\wt\4", "kontext/4-add-notifications"));
+
+        await Refresh();
+
+        var item = _sidebar.Groups.SelectMany(group => group.Items).Single(candidate => candidate.Issue.Number == 4);
+        Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.NeedsInput));
+        Assert.That(_tracker.StateOf(key).Status, Is.EqualTo(IssueWorkStatus.Ready), "the tracked state stays Ready so selecting the issue still resumes it");
+    }
+
+    [Test]
+    public async Task ShowsTheDotAsReadyAgainOnceTheSavedSessionIsCleared()
+    {
+        var key = new IssueKey("acme/memento", 4);
+        _finder.Found.Add(new ExistingWorkspace(new RepositoryRef("acme", "memento"), 4, new WorktreeInfo(@"C:\wt\4", "kontext/4-add-notifications", "abc", IsMain: false)));
+        _sessionStore.Save(new StoredSession(key, TerminalSessionId.New(), @"C:\wt\4", "kontext/4-add-notifications"));
+        await Refresh();
+
+        _sessionStore.Remove(key);
+        _tracker.Report(key, IssueWorkState.NotStarted);
+        _tracker.Report(key, new IssueWorkState(IssueWorkStatus.Ready, "kontext/4-add-notifications", @"C:\wt\4"));
+
+        var item = _sidebar.Groups.SelectMany(group => group.Items).Single(candidate => candidate.Issue.Number == 4);
+        Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.Ready));
     }
 
     [Test]

@@ -16,17 +16,17 @@ public sealed partial class ShellViewModel(
     public WorkspaceViewModel Workspace { get; } = workspace;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(SignedInText), nameof(GitHubStatusText), nameof(HasGitHubAccount), nameof(HasNoGitHubAccount))]
+    [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(ShowWorkspace), nameof(SignedInText), nameof(GitHubStatusText), nameof(HasGitHubAccount), nameof(HasNoGitHubAccount))]
     [NotifyCanExecuteChangedFor(nameof(SignInCommand))]
     public partial GitHubUser? User { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(EnterpriseSignedInText), nameof(EnterpriseStatusText), nameof(HasEnterpriseAccount), nameof(HasNoEnterpriseAccount))]
+    [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(ShowWorkspace), nameof(EnterpriseSignedInText), nameof(EnterpriseStatusText), nameof(HasEnterpriseAccount), nameof(HasNoEnterpriseAccount))]
     [NotifyCanExecuteChangedFor(nameof(SignInEnterpriseCommand))]
     public partial GitHubUser? EnterpriseUser { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowSignIn))]
+    [NotifyPropertyChangedFor(nameof(ShowSignIn), nameof(ShowWorkspace))]
     public partial bool IsStarting { get; set; } = true;
 
     [ObservableProperty]
@@ -56,6 +56,9 @@ public sealed partial class ShellViewModel(
     public bool IsSignedOut => !IsSignedIn;
 
     public bool ShowSignIn => IsSignedOut && !IsStarting;
+
+    /// <summary>The main layout is there from the first frame, while starting and once signed in; only the sign-in form replaces it.</summary>
+    public bool ShowWorkspace => IsSignedIn || IsStarting;
 
     public bool HasGitHubAccount => User is not null;
 

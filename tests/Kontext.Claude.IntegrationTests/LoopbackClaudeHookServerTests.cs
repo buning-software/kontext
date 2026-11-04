@@ -67,6 +67,20 @@ public class LoopbackClaudeHookServerTests
     }
 
     [Test]
+    public async Task PassesTheSessionIdClaudeReportsAlong()
+    {
+        var address = _server.Start()!;
+        var received = Capture(_server);
+        var session = TerminalSessionId.New();
+        var claudeSession = Guid.NewGuid();
+
+        await _client.PostAsync(new Uri(address, $"hook/{session.Value:D}"), Json($$"""{ "hook_event_name": "Stop", "session_id": "{{claudeSession:D}}" }"""));
+
+        var hook = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.That(hook, Is.EqualTo(new ClaudeHookEvent(session, "Stop", ClaudeSession: claudeSession)));
+    }
+
+    [Test]
     public async Task PassesTheNotificationTypeAlong()
     {
         var address = _server.Start()!;

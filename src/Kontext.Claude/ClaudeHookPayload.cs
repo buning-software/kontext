@@ -4,7 +4,7 @@ namespace Kontext.Claude;
 
 internal static class ClaudeHookPayload
 {
-    public static (string Name, string? NotificationType)? Parse(string json)
+    public static (string Name, string? NotificationType, string? SessionId)? Parse(string json)
     {
         try
         {
@@ -15,7 +15,7 @@ internal static class ClaudeHookPayload
             }
 
             var name = StringProperty(document.RootElement, "hook_event_name");
-            return string.IsNullOrWhiteSpace(name) ? null : (name, StringProperty(document.RootElement, "notification_type"));
+            return string.IsNullOrWhiteSpace(name) ? null : (name, StringProperty(document.RootElement, "notification_type"), StringProperty(document.RootElement, "session_id"));
         }
         catch (JsonException)
         {

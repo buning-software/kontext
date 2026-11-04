@@ -10,8 +10,10 @@ internal sealed class TerminalKeyboardHook : IDisposable
     private const uint WmChar = 0x0102;
     private const int VkC = 0x43;
     private const int VkV = 0x56;
+    private const int VkReturn = 0x0D;
     private const nint CharCopy = 0x03;
     private const nint CharPaste = 0x16;
+    private const nint CharReturn = 0x0D;
     private const nuint SubclassId = 3;
 
     private readonly MouseReportingState _state;
@@ -46,7 +48,7 @@ internal sealed class TerminalKeyboardHook : IDisposable
                 return _handledKeys.Remove((int)wParam);
 
             case WmChar:
-                var swallow = _swallowChar && wParam is CharCopy or CharPaste;
+                var swallow = _swallowChar && wParam is CharCopy or CharPaste or CharReturn;
                 _swallowChar = false;
                 return swallow;
 
@@ -64,7 +66,11 @@ internal sealed class TerminalKeyboardHook : IDisposable
             return false;
         }
 
-        if (action == TerminalShortcut.Paste)
+        if (action == TerminalShortcut.NewLine)
+        {
+            _send(TerminalShortcutReader.NewLineInput);
+        }
+        else if (action == TerminalShortcut.Paste)
         {
             if (!ClipboardHasText())
             {
@@ -79,7 +85,7 @@ internal sealed class TerminalKeyboardHook : IDisposable
         }
 
         _handledKeys.Add(virtualKey);
-        _swallowChar = virtualKey is VkC or VkV;
+        _swallowChar = virtualKey is VkC or VkV or VkReturn;
         return true;
     }
 

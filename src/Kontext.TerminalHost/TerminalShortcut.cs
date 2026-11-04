@@ -4,4 +4,5 @@ public enum TerminalShortcut
 {
     Copy,
     Paste,
+    NewLine,
 }

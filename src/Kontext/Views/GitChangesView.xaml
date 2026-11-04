@@ -1,0 +1,435 @@
+<UserControl
+    x:Class="Kontext.Views.GitChangesView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:domain="using:Kontext.Domain"
+    xmlns:views="using:Kontext.Views"
+    xmlns:vm="using:Kontext.Presentation">
+
+    <UserControl.Resources>
+      <ResourceDictionary>
+        <ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary x:Key="Default">
+                <SolidColorBrush x:Key="DiffAddedBackgroundBrush" Color="#3A2EA043" />
+                <SolidColorBrush x:Key="DiffRemovedBackgroundBrush" Color="#3AF85149" />
+            </ResourceDictionary>
+            <ResourceDictionary x:Key="Light">
+                <SolidColorBrush x:Key="DiffAddedBackgroundBrush" Color="#302EA043" />
+                <SolidColorBrush x:Key="DiffRemovedBackgroundBrush" Color="#30F85149" />
+            </ResourceDictionary>
+        </ResourceDictionary.ThemeDictionaries>
+
+        <Style x:Key="DiffGutterStyle" TargetType="TextBlock">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}" />
+        </Style>
+
+        <Style x:Key="DiffCodeStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="IsTextSelectionEnabled" Value="True" />
+        </Style>
+
+        <Style x:Key="DiffSignStyle" BasedOn="{StaticResource DiffCodeStyle}" TargetType="TextBlock">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="IsTextSelectionEnabled" Value="False" />
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Style>
+
+        <Style
+            x:Key="GitHeaderItemStyle"
+            BasedOn="{StaticResource DefaultListViewItemStyle}"
+            TargetType="ListViewItem">
+            <Setter Property="IsEnabled" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+
+        <Style
+            x:Key="GitFileItemStyle"
+            BasedOn="{StaticResource DefaultListViewItemStyle}"
+            TargetType="ListViewItem">
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="12,0" />
+        </Style>
+
+        <DataTemplate x:Key="GitHeaderTemplate" x:DataType="vm:GitChangeRow">
+            <TextBlock
+                Margin="12,10,12,4"
+                AutomationProperties.HeadingLevel="Level2"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="{x:Bind Text}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="GitFileTemplate" x:DataType="vm:GitChangeRow">
+            <Grid AutomationProperties.Name="{x:Bind Text}" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontFamily="Consolas"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{x:Bind StatusLetter}" />
+                <TextBlock
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTipService.ToolTip="{x:Bind Text}">
+                    <Run Text="{x:Bind FileName}" />
+                    <Run Foreground="{ThemeResource TextFillColorTertiaryBrush}" Text="{x:Bind Folder}" />
+                </TextBlock>
+                <StackPanel
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    Visibility="{x:Bind HasCounts}">
+                    <TextBlock
+                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind AdditionsText}" />
+                    <TextBlock
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind DeletionsText}" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="AddedLineTemplate" x:DataType="domain:DiffLine">
+            <Grid
+                Padding="8,0"
+                Background="{ThemeResource DiffAddedBackgroundBrush}"
+                ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(OldNumber)}" />
+                <TextBlock
+                    Grid.Column="1"
+                    Style="{StaticResource DiffGutterStyle}"
+                    Text="{x:Bind views:GitViewFormat.Number(NewNumber)}" />
+                <TextBlock
+                    Grid.Column="2"
+                    Style="{StaticResource DiffSignStyle}"
+                    Text="+" />
+                <TextBlock
+                    Grid.Column="3"
+                    Style="{StaticResource DiffCodeStyle}"
+                    Text="{x:Bind Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RemovedLineTemplate" x:DataType="domain:DiffLine">
+            <Grid
+                Padding="8,0"
+                Background="{ThemeResource DiffRemovedBackgroundBrush}"
+                ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(OldNumber)}" />
+                <TextBlock
+                    Grid.Column="1"
+                    Style="{StaticResource DiffGutterStyle}"
+                    Text="{x:Bind views:GitViewFormat.Number(NewNumber)}" />
+                <TextBlock
+                    Grid.Column="2"
+                    Style="{StaticResource DiffSignStyle}"
+                    Text="&#x2212;" />
+                <TextBlock
+                    Grid.Column="3"
+                    Style="{StaticResource DiffCodeStyle}"
+                    Text="{x:Bind Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ContextLineTemplate" x:DataType="domain:DiffLine">
+            <Grid Padding="8,0" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(OldNumber)}" />
+                <TextBlock
+                    Grid.Column="1"
+                    Style="{StaticResource DiffGutterStyle}"
+                    Text="{x:Bind views:GitViewFormat.Number(NewNumber)}" />
+                <TextBlock
+                    Grid.Column="2"
+                    Style="{StaticResource DiffSignStyle}"
+                    Text=" " />
+                <TextBlock
+                    Grid.Column="3"
+                    Style="{StaticResource DiffCodeStyle}"
+                    Text="{x:Bind Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="HunkLineTemplate" x:DataType="domain:DiffLine">
+            <Grid
+                Padding="8,2"
+                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource DiffCodeStyle}"
+                    Text="{x:Bind Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <Style x:Key="DiffWrappedCodeStyle" BasedOn="{StaticResource DiffCodeStyle}" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <DataTemplate x:Key="SplitAddedCellTemplate" x:DataType="vm:SplitCell">
+            <Grid
+                Padding="8,0"
+                Background="{ThemeResource DiffAddedBackgroundBrush}"
+                ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(Number)}" />
+                <TextBlock Grid.Column="1" Style="{StaticResource DiffSignStyle}" Text="+" />
+                <TextBlock Grid.Column="2" Style="{StaticResource DiffWrappedCodeStyle}" Text="{x:Bind Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SplitRemovedCellTemplate" x:DataType="vm:SplitCell">
+            <Grid
+                Padding="8,0"
+                Background="{ThemeResource DiffRemovedBackgroundBrush}"
+                ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(Number)}" />
+                <TextBlock Grid.Column="1" Style="{StaticResource DiffSignStyle}" Text="&#x2212;" />
+                <TextBlock Grid.Column="2" Style="{StaticResource DiffWrappedCodeStyle}" Text="{x:Bind Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SplitContextCellTemplate" x:DataType="vm:SplitCell">
+            <Grid Padding="8,0" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(Number)}" />
+                <TextBlock Grid.Column="1" Style="{StaticResource DiffSignStyle}" Text=" " />
+                <TextBlock Grid.Column="2" Style="{StaticResource DiffWrappedCodeStyle}" Text="{x:Bind Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <views:SplitCellTemplateSelector
+            x:Key="SplitCellTemplateSelector"
+            AddedTemplate="{StaticResource SplitAddedCellTemplate}"
+            ContextTemplate="{StaticResource SplitContextCellTemplate}"
+            RemovedTemplate="{StaticResource SplitRemovedCellTemplate}" />
+
+        <DataTemplate x:Key="SplitPairTemplate" x:DataType="vm:SplitDiffRow">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="1" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ContentControl
+                    HorizontalContentAlignment="Stretch"
+                    Content="{x:Bind Left}"
+                    ContentTemplateSelector="{StaticResource SplitCellTemplateSelector}"
+                    IsTabStop="False" />
+                <Border Grid.Column="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <ContentControl
+                    Grid.Column="2"
+                    HorizontalContentAlignment="Stretch"
+                    Content="{x:Bind Right}"
+                    ContentTemplateSelector="{StaticResource SplitCellTemplateSelector}"
+                    IsTabStop="False" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SplitSpanTemplate" x:DataType="vm:SplitDiffRow">
+            <Grid Padding="8,2" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource DiffWrappedCodeStyle}"
+                    Text="{x:Bind Spanning.Text}" />
+            </Grid>
+        </DataTemplate>
+
+        <views:SplitRowTemplateSelector
+            x:Key="SplitRowTemplateSelector"
+            PairTemplate="{StaticResource SplitPairTemplate}"
+            SpanTemplate="{StaticResource SplitSpanTemplate}" />
+
+        <views:GitRowTemplateSelector
+            x:Key="GitRowTemplateSelector"
+            FileTemplate="{StaticResource GitFileTemplate}"
+            HeaderTemplate="{StaticResource GitHeaderTemplate}" />
+
+        <views:GitRowStyleSelector
+            x:Key="GitRowStyleSelector"
+            FileStyle="{StaticResource GitFileItemStyle}"
+            HeaderStyle="{StaticResource GitHeaderItemStyle}" />
+
+        <views:DiffLineTemplateSelector
+            x:Key="DiffLineTemplateSelector"
+            AddedTemplate="{StaticResource AddedLineTemplate}"
+            ContextTemplate="{StaticResource ContextLineTemplate}"
+            HunkTemplate="{StaticResource HunkLineTemplate}"
+            RemovedTemplate="{StaticResource RemovedLineTemplate}" />
+      </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="1" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <InfoBar
+                Margin="0,0,0,4"
+                IsClosable="False"
+                IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                Severity="Error" />
+            <TextBlock
+                Grid.Row="1"
+                Margin="12,8"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="{x:Bind ViewModel.Summary, Mode=OneWay}"
+                Visibility="{x:Bind views:GitViewFormat.VisibleWhenText(ViewModel.Summary), Mode=OneWay}" />
+            <ListView
+                x:Name="FileList"
+                Grid.Row="2"
+                AutomationProperties.Name="Changed files"
+                ItemContainerStyleSelector="{StaticResource GitRowStyleSelector}"
+                ItemTemplateSelector="{StaticResource GitRowTemplateSelector}"
+                SelectionChanged="FileList_SelectionChanged"
+                SelectionMode="Single" />
+        </Grid>
+
+        <Border Grid.Column="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border
+                Padding="12,8"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1"
+                Visibility="{x:Bind views:VisibilityFormat.VisibleWhen(ViewModel.HasSelectedChange), Mode=OneWay}">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="2">
+                        <TextBlock
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Text="{x:Bind views:GitViewFormat.Title(ViewModel.SelectedChange), Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{x:Bind ViewModel.SelectedDiff.Notice, Mode=OneWay}"
+                            Visibility="{x:Bind views:GitViewFormat.VisibleWhenText(ViewModel.SelectedDiff.Notice), Mode=OneWay}" />
+                    </StackPanel>
+                    <SelectorBar
+                        x:Name="LayoutBar"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Diff layout"
+                        SelectionChanged="LayoutBar_SelectionChanged">
+                        <SelectorBarItem
+                            x:Name="UnifiedItem"
+                            IsSelected="True"
+                            Text="Unified"
+                            ToolTipService.ToolTip="Show the changes in one column" />
+                        <SelectorBarItem
+                            x:Name="SplitItem"
+                            Text="Split"
+                            ToolTipService.ToolTip="Show the old and new text side by side" />
+                    </SelectorBar>
+                </Grid>
+            </Border>
+
+            <ScrollViewer
+                x:Name="DiffScroller"
+                Grid.Row="1"
+                HorizontalScrollBarVisibility="Auto"
+                HorizontalScrollMode="Auto"
+                SizeChanged="DiffScroller_SizeChanged"
+                VerticalScrollBarVisibility="Auto"
+                Visibility="{x:Bind views:VisibilityFormat.VisibleWhenNot(ViewModel.HasSelectedChange, ViewModel.IsSplitView), Mode=OneWay}">
+                <ItemsRepeater
+                    x:Name="DiffRepeater"
+                    ItemTemplate="{StaticResource DiffLineTemplateSelector}"
+                    ItemsSource="{x:Bind ViewModel.SelectedDiff.Lines, Mode=OneWay}" />
+            </ScrollViewer>
+
+            <ScrollViewer
+                x:Name="SplitScroller"
+                Grid.Row="1"
+                HorizontalScrollBarVisibility="Disabled"
+                HorizontalScrollMode="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                Visibility="{x:Bind views:VisibilityFormat.VisibleWhen(ViewModel.HasSelectedChange, ViewModel.IsSplitView), Mode=OneWay}">
+                <ItemsRepeater
+                    ItemTemplate="{StaticResource SplitRowTemplateSelector}"
+                    ItemsSource="{x:Bind ViewModel.SplitRows, Mode=OneWay}" />
+            </ScrollViewer>
+
+            <TextBlock
+                Grid.RowSpan="2"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="No uncommitted changes"
+                Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
+            <TextBlock
+                Grid.RowSpan="2"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="Select a file"
+                Visibility="{x:Bind ViewModel.NeedsSelection, Mode=OneWay}" />
+        </Grid>
+    </Grid>
+</UserControl>
