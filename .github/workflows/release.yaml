@@ -16,7 +16,6 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        # ARM64 is not built yet: EasyWindowsTerminalControl.WinUI only ships x64 binaries.
         platform: [x64]
         include:
           - platform: x64
@@ -46,7 +45,6 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
-          # Only the package identity carries the app version; MinVersion and MaxVersionTested must stay as they are.
           $manifest = "src\Kontext\Package.appxmanifest"
           $pattern = '(<Identity\b[^>]*?\sVersion=")\d+\.\d+\.\d+\.\d+(")'
           $content = Get-Content $manifest -Raw
@@ -77,7 +75,6 @@ jobs:
         env:
           CLIENT_ID: ${{ vars.KONTEXT_GITHUB_CLIENT_ID }}
         run: |
-          # An installed MSIX is read-only, so users cannot add appsettings.local.json: the id must be built in.
           if ([string]::IsNullOrWhiteSpace($env:CLIENT_ID)) {
             Write-Error "Set the KONTEXT_GITHUB_CLIENT_ID repository variable; without it the released app cannot sign in."
             exit 1
@@ -87,18 +84,22 @@ jobs:
           $settings.GitHub.ClientId = $env:CLIENT_ID
           $settings | ConvertTo-Json -Depth 5 | Set-Content $path
 
-      - name: Decode signing certificate
+      - name: Install signing certificate
+        id: certificate
         shell: pwsh
         env:
           CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         run: |
-          $bytes = [Convert]::FromBase64String($env:CERTIFICATE_BASE64)
-          [IO.File]::WriteAllBytes("${{ github.workspace }}\cert.pfx", $bytes)
+          $pfx = "${{ github.workspace }}\cert.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CERTIFICATE_BASE64))
+          $securePassword = ConvertTo-SecureString -String $env:CERT_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
+          Remove-Item -Path $pfx -Force
+          "THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Build and Package MSIX
         shell: pwsh
-        env:
-          CERT_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         run: |
           dotnet publish src\Kontext\Kontext.csproj `
             -c Release `
@@ -108,24 +109,26 @@ jobs:
             -p:GenerateAppxPackageOnBuild=true `
             -p:AppxPackageDir="${{ github.workspace }}\AppxPackages\" `
             -p:AppxPackageSigningEnabled=true `
-            -p:PackageCertificateKeyFile="${{ github.workspace }}\cert.pfx" `
-            -p:PackageCertificatePassword=$env:CERT_PASSWORD `
+            -p:PackageCertificateThumbprint=${{ steps.certificate.outputs.THUMBPRINT }} `
+            -p:AppxPackageSigningTimestampDigestAlgorithm=SHA256 `
+            -p:AppxPackageSigningTimestampServerUrl=http://timestamp.digicert.com `
             -p:AppxBundle=Never
 
       - name: Export public certificate
         if: matrix.platform == 'x64'
         shell: pwsh
-        env:
-          CERT_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         run: |
-          $securePassword = ConvertTo-SecureString -String $env:CERT_PASSWORD -AsPlainText -Force
-          $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\cert.pfx" -Password $securePassword
+          $cert = Get-Item "Cert:\CurrentUser\My\${{ steps.certificate.outputs.THUMBPRINT }}"
           Export-Certificate -Cert $cert -FilePath "${{ github.workspace }}\Kontext.cer" | Out-Null
 
       - name: Remove signing certificate
         if: always()
         shell: pwsh
-        run: Remove-Item -Path "${{ github.workspace }}\cert.pfx" -Force -ErrorAction SilentlyContinue
+        run: |
+          Remove-Item -Path "${{ github.workspace }}\cert.pfx" -Force -ErrorAction SilentlyContinue
+          if ("${{ steps.certificate.outputs.THUMBPRINT }}") {
+            Remove-Item -Path "Cert:\CurrentUser\My\${{ steps.certificate.outputs.THUMBPRINT }}" -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Rename MSIX with platform suffix
         shell: pwsh

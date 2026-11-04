@@ -117,7 +117,7 @@ Get-ChildItem tests -Recurse -Filter *.UnitTests.csproj | ForEach-Object { dotne
 
 ### Release
 
-Publishing a GitHub release tagged like `v1.2.3` runs the tests, then builds a signed, self-contained x64 MSIX and attaches it to the release together with `Kontext.cer`, the public certificate. The tag sets the package version. ARM64 is not built because the embedded terminal control only ships x64 binaries.
+Publishing a GitHub release tagged like `v1.2.3` runs the tests, then builds a signed, self-contained x64 MSIX and attaches it to the release together with `Kontext.cer`, the public certificate. The tag sets the package version. The workflow imports the certificate into the runner's certificate store and signs by thumbprint, which avoids the APPX0105 and APPX0107 warnings that come from pointing MSBuild at the `.pfx`. The signature is timestamped (DigiCert), so the package keeps verifying after the certificate expires. ARM64 is not built because the embedded terminal control only ships x64 binaries.
 
 One-time setup:
 
