@@ -39,7 +39,7 @@ public abstract class ShellViewModelFixture
         EnterprisePrompt = new FakeEnterprisePrompt();
         DeviceLogin = new FakeGitHubDeviceLogin();
         _autoStart = new SelectionAutoStart(coordinator, tracker, new InMemoryIssueSessionRegistry(), TimeProvider.System, AutoStartOptions.Default);
-        Sidebar = new IssueSidebarViewModel(GitHub, tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(GitHub), TimeProvider.System);
+        Sidebar = new IssueSidebarViewModel(GitHub, tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(GitHub), new InMemoryHiddenRepositoryStore(), TimeProvider.System);
         _detail = new IssueDetailViewModel(coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart);
         Shell = new ShellViewModel(GitHub, DeviceLogin, Tokens, EnterprisePrompt, new WorkspaceViewModel(Sidebar, _detail, _autoStart));
     }

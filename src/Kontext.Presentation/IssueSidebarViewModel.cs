@@ -13,7 +13,9 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     private readonly IIssueWorkTracker _tracker;
     private readonly IExistingWorkspaceFinder _existingWorkspaces;
     private readonly IWorkspaceIssues _workspaceIssues;
+    private readonly IHiddenRepositoryStore _hiddenRepositories;
     private readonly TimeProvider _clock;
+    private readonly HashSet<string> _hidden;
     private readonly LatestOnly _loads = new();
     private readonly Dictionary<string, RepositoryGroupViewModel> _groupsByName = new(StringComparer.OrdinalIgnoreCase);
 
@@ -26,18 +28,23 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         IIssueWorkTracker tracker,
         IExistingWorkspaceFinder existingWorkspaces,
         IWorkspaceIssues workspaceIssues,
+        IHiddenRepositoryStore hiddenRepositories,
         TimeProvider clock)
     {
         _gitHub = gitHub;
         _tracker = tracker;
         _existingWorkspaces = existingWorkspaces;
         _workspaceIssues = workspaceIssues;
+        _hiddenRepositories = hiddenRepositories;
         _clock = clock;
+        _hidden = new HashSet<string>(hiddenRepositories.Load(), StringComparer.OrdinalIgnoreCase);
 
         _tracker.Changed += OnTrackerChanged;
     }
 
     public ObservableCollection<RepositoryGroupViewModel> Groups { get; } = [];
+
+    public ObservableCollection<RepositoryFilterItemViewModel> RepositoryFilters { get; } = [];
 
     [ObservableProperty]
     public partial IssueItemViewModel? SelectedItem { get; set; }
@@ -60,6 +67,12 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
 
     public bool IsEmpty => _loadedOnce && !IsLoading && !HasError && _all.Count == 0;
 
+    public bool IsEverythingHidden => _all.Count > 0 && _all.All(IsHidden);
+
+    public bool HasNoRepositoryFilters => RepositoryFilters.Count == 0;
+
+    public bool IsFilterActive => RepositoryFilters.Any(filter => !filter.IsVisible);
+
     public void Dispose()
     {
         _tracker.Changed -= OnTrackerChanged;
@@ -74,6 +87,9 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _itemsByKey = [];
         _groupsByName.Clear();
         Groups.Clear();
+        RepositoryFilters.Clear();
+        OnPropertyChanged(nameof(HasNoRepositoryFilters));
+        OnPropertyChanged(nameof(IsFilterActive));
 
         _loadedOnce = false;
 
@@ -117,6 +133,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
             ErrorMessage = ex.Message;
             _all = [];
             _itemsByKey = [];
+            RebuildRepositoryFilters();
             ApplyFilter();
         }
 
@@ -138,6 +155,52 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
 
         SelectedItem = previouslySelected is { } key && _itemsByKey.TryGetValue(key, out var reloaded) ? reloaded : null;
 
+        RebuildRepositoryFilters();
+        ApplyFilter();
+    }
+
+    private bool IsHidden(IssueItemViewModel item) => _hidden.Contains(item.Issue.Repository.DisplayName);
+
+    private void RebuildRepositoryFilters()
+    {
+        RepositoryFilters.Clear();
+
+        var names = _all.Select(item => item.Issue.Repository.DisplayName).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in names)
+        {
+            RepositoryFilters.Add(new RepositoryFilterItemViewModel(name, isVisible: !_hidden.Contains(name), OnRepositoryVisibilityChanged));
+        }
+
+        OnPropertyChanged(nameof(HasNoRepositoryFilters));
+    }
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        if (_hidden.Count == 0)
+        {
+            return;
+        }
+
+        _hidden.Clear();
+        _hiddenRepositories.Save(_hidden);
+
+        RebuildRepositoryFilters();
+        ApplyFilter();
+    }
+
+    private void OnRepositoryVisibilityChanged(RepositoryFilterItemViewModel filter)
+    {
+        if (filter.IsVisible)
+        {
+            _hidden.Remove(filter.Name);
+        }
+        else
+        {
+            _hidden.Add(filter.Name);
+        }
+
+        _hiddenRepositories.Save(_hidden);
         ApplyFilter();
     }
 
@@ -169,7 +232,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
 
     private void ApplyFilter()
     {
-        var visible = _all.Where(item => IssueSearch.Matches(item.Issue, SearchText)).ToList();
+        var visible = _all.Where(item => !IsHidden(item) && IssueSearch.Matches(item.Issue, SearchText)).ToList();
 
         var groups = IssueGrouper.Group(visible, item => item.Issue.Repository.DisplayName, item => item.Issue.UpdatedAt);
 
@@ -195,6 +258,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
 
         CountText = BuildCountText(visible.Count);
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(IsEverythingHidden));
+        OnPropertyChanged(nameof(IsFilterActive));
     }
 
     private string BuildCountText(int visibleCount)
@@ -204,8 +269,9 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
             return string.Empty;
         }
 
-        var closed = _all.Count(item => item.Issue.IsClosed);
-        var open = _all.Count - closed;
+        var shown = _all.Where(item => !IsHidden(item)).ToList();
+        var closed = shown.Count(item => item.Issue.IsClosed);
+        var open = shown.Count - closed;
 
         var issues = open == 1 ? "1 open issue" : $"{open} open issues";
         var text = string.IsNullOrWhiteSpace(SearchText) ? issues : $"{visibleCount} of {issues}";

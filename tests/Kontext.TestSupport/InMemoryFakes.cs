@@ -50,6 +50,21 @@ public sealed class InMemoryIssueSessionRegistry : IIssueSessionRegistry
     public void Remove(IssueKey issue) => _sessions.TryRemove(issue, out _);
 }
 
+public sealed class InMemoryHiddenRepositoryStore(params string[] hidden) : IHiddenRepositoryStore
+{
+    public HashSet<string> Hidden { get; private set; } = new(hidden, StringComparer.OrdinalIgnoreCase);
+
+    public int Saves { get; private set; }
+
+    public IReadOnlySet<string> Load() => new HashSet<string>(Hidden, StringComparer.OrdinalIgnoreCase);
+
+    public void Save(IReadOnlySet<string> hidden)
+    {
+        Hidden = new HashSet<string>(hidden, StringComparer.OrdinalIgnoreCase);
+        Saves++;
+    }
+}
+
 public sealed class FakeClaudeLauncher : IClaudeLauncher
 {
     public bool ReportsItself { get; set; } = true;

@@ -1,5 +1,6 @@
 using EasyWindowsTerminalControl;
 using Kontext.Domain;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -41,7 +42,43 @@ public sealed class TerminalControlHost
         if (control is not null)
         {
             control.Visibility = Visibility.Visible;
-            control.Focus(FocusState.Programmatic);
+            FocusWhenReady(control);
         }
+    }
+
+    // A control that has only just become visible cannot take focus until it has been laid out, and the click that selected
+    // the issue hands focus to the menu item after this runs. So focus once layout and that click have finished, and once more
+    // when the control finishes loading if it still was not ready.
+    private static void FocusWhenReady(EasyTerminalControl control)
+    {
+        if (!control.DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => Focus(control)))
+        {
+            Focus(control);
+        }
+    }
+
+    private static void Focus(EasyTerminalControl control)
+    {
+        if (control.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        control.UpdateLayout();
+        if (control.Focus(FocusState.Programmatic) || control.IsLoaded)
+        {
+            return;
+        }
+
+        void OnLoaded(object sender, RoutedEventArgs args)
+        {
+            control.Loaded -= OnLoaded;
+            if (control.Visibility == Visibility.Visible)
+            {
+                control.Focus(FocusState.Programmatic);
+            }
+        }
+
+        control.Loaded += OnLoaded;
     }
 }
