@@ -39,7 +39,7 @@ public class ClaudeHooksTests
     }
 
     private ClaudeHooks Create(FakeHookServer server)
-        => new(server, new ClaudeActivityReporter(_registry, _tracker, new ImmediateDispatcher()));
+        => new(server, new ClaudeActivityReporter(_registry, _tracker, new FakeSessionStore(), new ImmediateDispatcher()));
 
     [Test]
     public void StartsListeningOnlyWhenAFirstSessionNeedsIt()

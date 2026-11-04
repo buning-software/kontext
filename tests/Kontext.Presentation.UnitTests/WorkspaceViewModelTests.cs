@@ -29,8 +29,8 @@ public class WorkspaceViewModelTests
             Issues = [Issues.Create(4, "Add notifications", "acme/memento"), Issues.Create(3, "Bring project under UI test", "acme/memento")],
         };
 
-        _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), _clock);
-        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart);
+        _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), _clock);
+        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), _clock, GitChangesOptions.Default));
         _workspace = new WorkspaceViewModel(_sidebar, _detail, _autoStart);
 
         await _sidebar.RefreshCommand.ExecuteAsync(null);

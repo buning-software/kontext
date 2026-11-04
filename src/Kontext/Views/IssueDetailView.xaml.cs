@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Kontext.Domain;
 using Kontext.Presentation;
 using Kontext.Terminal;
@@ -12,7 +13,7 @@ public sealed partial class IssueDetailView : UserControl
         nameof(ViewModel),
         typeof(IssueDetailViewModel),
         typeof(IssueDetailView),
-        new PropertyMetadata(null, (view, _) => ((IssueDetailView)view).Bindings?.Update()));
+        new PropertyMetadata(null, (view, args) => ((IssueDetailView)view).OnViewModelChanged((IssueDetailViewModel?)args.OldValue, (IssueDetailViewModel?)args.NewValue)));
 
     public static readonly DependencyProperty ControlHostProperty = DependencyProperty.Register(
         nameof(ControlHost),
@@ -42,11 +43,53 @@ public sealed partial class IssueDetailView : UserControl
 
     private void OpenIn(WorkspaceTool tool) => ViewModel?.OpenInCommand.Execute(tool);
 
+    private void OnViewModelChanged(IssueDetailViewModel? oldValue, IssueDetailViewModel? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.PropertyChanged += OnViewModelPropertyChanged;
+        }
+
+        Bindings?.Update();
+        SelectTabItem();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(IssueDetailViewModel.SelectedTab))
+        {
+            SelectTabItem();
+        }
+    }
+
+    // The view model can move the selection itself (for example back to Terminal when the Git tab disappears).
+    private void SelectTabItem()
+    {
+        var item = ViewModel?.SelectedTab switch
+        {
+            DetailTab.Git => GitTab,
+            DetailTab.Issue => IssueTab,
+            _ => TerminalTab,
+        };
+
+        if (!ReferenceEquals(Tabs.SelectedItem, item))
+        {
+            Tabs.SelectedItem = item;
+        }
+    }
+
     private void Tabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         if (ViewModel is not null)
         {
-            ViewModel.ShowIssueTab = ReferenceEquals(sender.SelectedItem, IssueTab);
+            ViewModel.SelectedTab = ReferenceEquals(sender.SelectedItem, GitTab)
+                ? DetailTab.Git
+                : ReferenceEquals(sender.SelectedItem, IssueTab) ? DetailTab.Issue : DetailTab.Terminal;
         }
     }
 }

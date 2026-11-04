@@ -54,11 +54,13 @@ public class CompositionTests
         typeof(IRepositoryCloneStore),
         typeof(ISessionStore),
         typeof(IHiddenRepositoryStore),
+        typeof(ICollapsedRepositoryStore),
         typeof(IIssueWorkTracker),
         typeof(IIssueSessionRegistry),
         typeof(IIssueSessionCoordinator),
         typeof(IClaudeLauncher),
         typeof(IWorkspaceOpener),
+        typeof(IWorkspaceChanges),
         typeof(ClaudeEnvironmentScrubber),
         typeof(TerminalZoom),
     ];
@@ -69,6 +71,7 @@ public class CompositionTests
         typeof(WorkspaceViewModel),
         typeof(IssueSidebarViewModel),
         typeof(IssueDetailViewModel),
+        typeof(GitChangesViewModel),
         typeof(AppLifetime),
     ];
 

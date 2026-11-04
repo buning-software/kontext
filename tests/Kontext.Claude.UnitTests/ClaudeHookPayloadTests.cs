@@ -9,7 +9,7 @@ public class ClaudeHookPayloadTests
     {
         var parsed = ClaudeHookPayload.Parse("""{ "session_id": "abc", "hook_event_name": "Stop", "last_assistant_message": "done" }""");
 
-        Assert.That(parsed, Is.EqualTo(("Stop", (string?)null)));
+        Assert.That(parsed, Is.EqualTo(("Stop", (string?)null, (string?)"abc")));
     }
 
     [Test]
@@ -17,7 +17,15 @@ public class ClaudeHookPayloadTests
     {
         var parsed = ClaudeHookPayload.Parse("""{ "hook_event_name": "Notification", "notification_type": "permission_prompt", "message": "Claude needs your permission" }""");
 
-        Assert.That(parsed, Is.EqualTo(("Notification", "permission_prompt")));
+        Assert.That(parsed, Is.EqualTo(("Notification", (string?)"permission_prompt", (string?)null)));
+    }
+
+    [Test]
+    public void ReadsTheSessionIdClaudeIsUsing()
+    {
+        var parsed = ClaudeHookPayload.Parse("""{ "session_id": "0a1e4b01-845d-4b16-9dad-8f5539363baa", "hook_event_name": "UserPromptSubmit" }""");
+
+        Assert.That(parsed?.SessionId, Is.EqualTo("0a1e4b01-845d-4b16-9dad-8f5539363baa"));
     }
 
     [TestCase("")]

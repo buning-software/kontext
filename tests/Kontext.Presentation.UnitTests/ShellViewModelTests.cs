@@ -15,6 +15,46 @@ public class ShellViewModelTests : ShellViewModelFixture
     }
 
     [Test]
+    public void ShowsTheWorkspaceLayoutWhileStartingSoNothingJumpsWhenSigningInIsDone()
+    {
+        Assert.That(Shell.IsStarting, Is.True);
+        Assert.That(Shell.ShowWorkspace, Is.True);
+    }
+
+    [Test]
+    public async Task KeepsTheWorkspaceLayoutOnceASavedTokenSignsIn()
+    {
+        Build(savedToken: "ghp_saved");
+        var hidden = false;
+        Shell.PropertyChanged += (_, _) => hidden |= !Shell.ShowWorkspace;
+
+        await Shell.InitializeCommand.ExecuteAsync(null);
+
+        Assert.That(hidden, Is.False, "the layout must never disappear between starting and signed in");
+        Assert.That(Shell.ShowWorkspace, Is.True);
+    }
+
+    [Test]
+    public async Task ReplacesTheWorkspaceLayoutWithTheSignInFormWhenThereIsNoAccount()
+    {
+        await Shell.InitializeCommand.ExecuteAsync(null);
+
+        Assert.That(Shell.ShowWorkspace, Is.False);
+        Assert.That(Shell.ShowSignIn, Is.True);
+    }
+
+    [Test]
+    public void TellsWhenTheWorkspaceLayoutStopsBeingShown()
+    {
+        var changed = new List<string?>();
+        Shell.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        Shell.IsStarting = false;
+
+        Assert.That(changed, Does.Contain(nameof(ShellViewModel.ShowWorkspace)));
+    }
+
+    [Test]
     public async Task ShowsTheSignInFormOnceItIsKnownThereIsNoSavedToken()
     {
         await Shell.InitializeCommand.ExecuteAsync(null);

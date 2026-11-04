@@ -6,6 +6,7 @@ public class TerminalShortcutReaderTests
     private const int VkC = 0x43;
     private const int VkV = 0x56;
     private const int VkInsert = 0x2D;
+    private const int VkReturn = 0x0D;
 
     [TestCase(VkV, true, false, TerminalShortcut.Paste, Description = "Ctrl+V")]
     [TestCase(VkV, true, true, TerminalShortcut.Paste, Description = "Ctrl+Shift+V")]
@@ -60,5 +61,27 @@ public class TerminalShortcutReaderTests
     {
         Assert.That(TerminalShortcutReader.FromKey('A', control: true, shift: true, alt: false), Is.Null);
         Assert.That(TerminalShortcutReader.FromKey(0x0D, control: true, shift: true, alt: false), Is.Null, "Enter");
+    }
+
+    [Test]
+    public void ShiftEnterIsANewLineBecauseThePlainEnterWouldSubmit()
+    {
+        Assert.That(TerminalShortcutReader.FromKey(VkReturn, control: false, shift: true, alt: false), Is.EqualTo(TerminalShortcut.NewLine));
+    }
+
+    [Test]
+    public void ShiftEnterSendsEscapeThenCarriageReturnWhichClaudeReadsAsANewLine()
+    {
+        Assert.That(TerminalShortcutReader.NewLineInput, Is.EqualTo("\u001b\r"));
+    }
+
+    [TestCase(false, false, false, Description = "Enter")]
+    [TestCase(true, false, false, Description = "Ctrl+Enter")]
+    [TestCase(true, true, false, Description = "Ctrl+Shift+Enter")]
+    [TestCase(false, true, true, Description = "Alt+Shift+Enter")]
+    [TestCase(false, false, true, Description = "Alt+Enter")]
+    public void OtherEnterCombinationsAreLeftAlone(bool control, bool shift, bool alt)
+    {
+        Assert.That(TerminalShortcutReader.FromKey(VkReturn, control, shift, alt), Is.Null);
     }
 }

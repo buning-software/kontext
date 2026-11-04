@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
         services.AddSingleton<ISessionStore, JsonSessionStore>();
         services.AddSingleton<IHiddenRepositoryStore, JsonHiddenRepositoryStore>();
+        services.AddSingleton<ICollapsedRepositoryStore, JsonCollapsedRepositoryStore>();
         services.AddSingleton<IIssueSessionRegistry,IssueSessionRegistry>();
         services.AddSingleton<IIssueWorkTracker, IssueWorkTracker>();
         services.AddSingleton<IIssueSessionCoordinator, IssueSessionCoordinator>();

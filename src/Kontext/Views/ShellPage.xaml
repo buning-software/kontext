@@ -5,26 +5,6 @@
     xmlns:views="using:Kontext.Views">
 
     <Grid>
-        <StackPanel
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Spacing="16"
-            Visibility="{x:Bind ViewModel.IsStarting, Mode=OneWay}">
-            <Image
-                Width="72"
-                Height="72"
-                AutomationProperties.AccessibilityView="Raw"
-                Source="ms-appx:///Assets/Kontext.png" />
-            <ProgressRing
-                Width="40"
-                Height="40"
-                IsActive="{x:Bind ViewModel.IsStarting, Mode=OneWay}" />
-            <TextBlock
-                HorizontalAlignment="Center"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Text="Signing in…" />
-        </StackPanel>
-
         <views:SignInView
             Margin="24"
             ViewModel="{x:Bind ViewModel}"
@@ -33,6 +13,6 @@
         <views:WorkspaceView
             ControlHost="{x:Bind ControlHost}"
             ViewModel="{x:Bind ViewModel}"
-            Visibility="{x:Bind ViewModel.IsSignedIn, Mode=OneWay}" />
+            Visibility="{x:Bind ViewModel.ShowWorkspace, Mode=OneWay}" />
     </Grid>
 </Page>

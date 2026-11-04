@@ -180,8 +180,12 @@
                 <SelectorBarItem
                     x:Name="TerminalTab"
                     IsSelected="True"
-                    Text="Terminal" />
-                <SelectorBarItem x:Name="IssueTab" Text="Issue" />
+                    Text="terminal" />
+                <SelectorBarItem x:Name="IssueTab" Text="issue" />
+                <SelectorBarItem
+                    x:Name="GitTab"
+                    Text="git"
+                    Visibility="{x:Bind ViewModel.HasWorkspace, Mode=OneWay}" />
             </SelectorBar>
 
             <Grid Grid.Row="2">
@@ -224,6 +228,8 @@
                         </StackPanel>
                     </Border>
                 </Grid>
+
+                <views:GitChangesView ViewModel="{x:Bind ViewModel.GitChanges, Mode=OneWay}" Visibility="{x:Bind ViewModel.ShowGitTab, Mode=OneWay}" />
 
                 <ScrollViewer Visibility="{x:Bind ViewModel.ShowIssueTab, Mode=OneWay}">
                     <StackPanel MaxWidth="900" Spacing="16">

@@ -90,10 +90,15 @@
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource BodyTextBlockStyle}"
                             Text="{x:Bind ViewModel.Workspace.Sidebar.CountText, Mode=OneWay}" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource BodyTextBlockStyle}"
+                            Text="Signing in…"
+                            Visibility="{x:Bind ViewModel.IsStarting, Mode=OneWay}" />
                         <ProgressRing
                             Width="14"
                             Height="14"
-                            IsActive="{x:Bind ViewModel.Workspace.Sidebar.IsLoading, Mode=OneWay}" />
+                            IsActive="{x:Bind views:VisibilityFormat.Either(ViewModel.Workspace.Sidebar.IsLoading, ViewModel.IsStarting), Mode=OneWay}" />
                     </StackPanel>
                     <StackPanel
                         Grid.Column="1"
@@ -148,6 +153,7 @@
                         <Button
                             Padding="8,4"
                             AutomationProperties.Name="Refresh"
+                            IsEnabled="{x:Bind views:VisibilityFormat.Not(ViewModel.IsStarting), Mode=OneWay}"
                             Command="{x:Bind ViewModel.Workspace.Sidebar.RefreshCommand}"
                             ToolTipService.ToolTip="Refresh">
                             <FontIcon FontSize="14" Glyph="&#xE72C;" />
@@ -171,10 +177,35 @@
         </NavigationView.PaneCustomContent>
 
         <Grid>
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="16"
+                Visibility="{x:Bind ViewModel.IsStarting, Mode=OneWay}">
+                <Image
+                    Width="96"
+                    Height="96"
+                    AutomationProperties.AccessibilityView="Raw"
+                    Source="ms-appx:///Assets/Kontext.png" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource SubtitleTextBlockStyle}"
+                    Text="Signing in…" />
+            </StackPanel>
+            <!-- Outside the stack so the logo and text sit exactly where "Select an issue" will. -->
+            <ProgressRing
+                Width="32"
+                Height="32"
+                Margin="0,200,0,0"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsActive="{x:Bind ViewModel.IsStarting, Mode=OneWay}"
+                Visibility="{x:Bind ViewModel.IsStarting, Mode=OneWay}" />
             <views:IssueDetailView
                 ControlHost="{x:Bind ControlHost, Mode=OneWay}"
                 ViewModel="{x:Bind ViewModel.Workspace.Detail}"
-                Visibility="{x:Bind ViewModel.Workspace.IsDetailVisible, Mode=OneWay}" />
+                Visibility="{x:Bind views:VisibilityFormat.VisibleWhenNot(ViewModel.Workspace.IsDetailVisible, ViewModel.IsStarting), Mode=OneWay}" />
             <views:SettingsView
                 ViewModel="{x:Bind ViewModel}"
                 Visibility="{x:Bind ViewModel.Workspace.IsSettingsOpen, Mode=OneWay}" />

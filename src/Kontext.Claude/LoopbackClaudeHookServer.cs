@@ -98,9 +98,9 @@ internal sealed class LoopbackClaudeHookServer : IClaudeHookServer, IDisposable
         var session = SessionIn(context.Request.Url);
         Respond(context);
 
-        if (session is { } id && ClaudeHookPayload.Parse(body) is var (name, notificationType))
+        if (session is { } id && ClaudeHookPayload.Parse(body) is var (name, notificationType, claudeSession))
         {
-            EventReceived?.Invoke(this, new ClaudeHookEventArgs(new ClaudeHookEvent(id, name, notificationType)));
+            EventReceived?.Invoke(this, new ClaudeHookEventArgs(new ClaudeHookEvent(id, name, notificationType, Guid.TryParse(claudeSession, CultureInfo.InvariantCulture, out var guid) ? guid : null)));
         }
     }
 
