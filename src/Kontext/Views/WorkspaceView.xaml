@@ -8,13 +8,15 @@
     <UserControl.Resources>
         <DataTemplate x:Key="GroupTemplate" x:DataType="vm:RepositoryGroupViewModel">
             <NavigationViewItem
-                Content="{x:Bind Name}"
+                AutomationProperties.Name="{x:Bind Name}"
                 IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
                 MenuItemsSource="{x:Bind Items}"
-                SelectsOnInvoked="False">
-                <NavigationViewItem.InfoBadge>
-                    <InfoBadge Value="{x:Bind Items.Count}" />
-                </NavigationViewItem.InfoBadge>
+                SelectsOnInvoked="False"
+                ToolTipService.ToolTip="{x:Bind Name}">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{x:Bind Name}"
+                    TextTrimming="CharacterEllipsis" />
             </NavigationViewItem>
         </DataTemplate>
 
@@ -86,21 +88,71 @@
                         Spacing="8">
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Style="{StaticResource BodyTextBlockStyle}"
                             Text="{x:Bind ViewModel.Workspace.Sidebar.CountText, Mode=OneWay}" />
                         <ProgressRing
                             Width="14"
                             Height="14"
                             IsActive="{x:Bind ViewModel.Workspace.Sidebar.IsLoading, Mode=OneWay}" />
                     </StackPanel>
-                    <Button
+                    <StackPanel
                         Grid.Column="1"
-                        Padding="8,4"
-                        AutomationProperties.Name="Refresh"
-                        Command="{x:Bind ViewModel.Workspace.Sidebar.RefreshCommand}"
-                        ToolTipService.ToolTip="Refresh">
-                        <FontIcon FontSize="14" Glyph="&#xE72C;" />
-                    </Button>
+                        Orientation="Horizontal"
+                        Spacing="4">
+                        <Button
+                            Padding="8,4"
+                            AutomationProperties.Name="Filter repositories"
+                            ToolTipService.ToolTip="Filter repositories">
+                            <Grid>
+                                <FontIcon FontSize="14" Glyph="&#xE71C;" />
+                                <Ellipse
+                                    Width="8"
+                                    Height="8"
+                                    Margin="0,-4,-6,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                    Visibility="{x:Bind ViewModel.Workspace.Sidebar.IsFilterActive, Mode=OneWay}" />
+                            </Grid>
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MinWidth="220" Spacing="4">
+                                        <TextBlock
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="Show repositories" />
+                                        <TextBlock
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Text="No repositories"
+                                            Visibility="{x:Bind ViewModel.Workspace.Sidebar.HasNoRepositoryFilters, Mode=OneWay}" />
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.Workspace.Sidebar.RepositoryFilters}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:RepositoryFilterItemViewModel">
+                                                    <CheckBox
+                                                        Content="{x:Bind Name}"
+                                                        IsChecked="{x:Bind IsVisible, Mode=TwoWay}"
+                                                        ToolTipService.ToolTip="{x:Bind Name}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button
+                                            Margin="0,4,0,0"
+                                            HorizontalAlignment="Stretch"
+                                            Command="{x:Bind ViewModel.Workspace.Sidebar.ClearFiltersCommand}"
+                                            Content="Clear filters"
+                                            Visibility="{x:Bind ViewModel.Workspace.Sidebar.IsFilterActive, Mode=OneWay}" />
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button
+                            Padding="8,4"
+                            AutomationProperties.Name="Refresh"
+                            Command="{x:Bind ViewModel.Workspace.Sidebar.RefreshCommand}"
+                            ToolTipService.ToolTip="Refresh">
+                            <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                        </Button>
+                    </StackPanel>
                 </Grid>
                 <InfoBar
                     IsClosable="False"
@@ -111,6 +163,10 @@
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="No open issues"
                     Visibility="{x:Bind ViewModel.Workspace.Sidebar.IsEmpty, Mode=OneWay}" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="All repositories are hidden"
+                    Visibility="{x:Bind ViewModel.Workspace.Sidebar.IsEverythingHidden, Mode=OneWay}" />
             </StackPanel>
         </NavigationView.PaneCustomContent>
 

@@ -33,7 +33,9 @@ public static class ServiceCollectionExtensions
                 WorktreesRoot: Path.Combine(dataRoot, "worktrees"),
                 ClonesRoot: Path.Combine(dataRoot, "repos")))
             .AddKontextTerminalHost()
-            .AddKontextClaude(new ClaudeOptions(ClaudeConfigDirectory()))
+            .AddKontextClaude(new ClaudeOptions(
+                ClaudeConfigDirectory(),
+                PermissionMode: configuration["Claude:PermissionMode"] is { Length: > 0 } mode ? mode : "plan"))
             .AddKontextExternalTools()
             .AddKontextSessions(new SessionsOptions(dataRoot))
             .AddKontextPresentation();

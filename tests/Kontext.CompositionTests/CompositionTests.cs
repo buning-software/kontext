@@ -53,6 +53,7 @@ public class CompositionTests
         typeof(IExistingWorkspaceFinder),
         typeof(IRepositoryCloneStore),
         typeof(ISessionStore),
+        typeof(IHiddenRepositoryStore),
         typeof(IIssueWorkTracker),
         typeof(IIssueSessionRegistry),
         typeof(IIssueSessionCoordinator),

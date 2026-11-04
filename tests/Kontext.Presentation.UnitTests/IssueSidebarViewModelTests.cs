@@ -10,11 +10,16 @@ public class IssueSidebarViewModelTests
     private InMemoryIssueWorkTracker _tracker = null!;
     private FakeGitHubService _gitHub = null!;
     private FakeExistingWorkspaceFinder _finder = null!;
+    private InMemoryHiddenRepositoryStore _hiddenStore = null!;
     private IssueSidebarViewModel _sidebar = null!;
+
+    private IssueSidebarViewModel CreateSidebarWith(InMemoryHiddenRepositoryStore hiddenStore) =>
+        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
 
     [SetUp]
     public void CreateSidebar()
     {
+        _hiddenStore = new InMemoryHiddenRepositoryStore();
         _tracker = new InMemoryIssueWorkTracker();
         _gitHub = new FakeGitHubService();
         _finder = new FakeExistingWorkspaceFinder();
@@ -26,7 +31,7 @@ public class IssueSidebarViewModelTests
             Issues.Create(159, "Creating Galleries", "acme/gallery", labels: ["enhancement"]),
         ];
 
-        _sidebar = new IssueSidebarViewModel(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
+        _sidebar = CreateSidebarWith(_hiddenStore);
     }
 
     [TearDown]
@@ -65,6 +70,124 @@ public class IssueSidebarViewModelTests
         Assert.That(_sidebar.Groups.Single(group => group.Name == "acme/memento").Items, Has.Count.EqualTo(2));
         Assert.That(_sidebar.CountText, Is.EqualTo("3 open issues"));
         Assert.That(_sidebar.IsLoading, Is.False);
+    }
+
+    [Test]
+    public async Task HidingARepositoryRemovesItsGroupButKeepsItInTheFilterList()
+    {
+        await Refresh();
+
+        _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento").IsVisible = false;
+
+        Assert.That(_sidebar.Groups.Select(group => group.Name), Is.EqualTo(Expect.Seq("acme/gallery")));
+        Assert.That(_sidebar.RepositoryFilters.Select(filter => filter.Name), Is.EqualTo(Expect.Seq("acme/gallery", "acme/memento")));
+        Assert.That(_sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento").IsVisible, Is.False);
+    }
+
+    [Test]
+    public async Task ShowingAHiddenRepositoryAgainBringsItsGroupBack()
+    {
+        await Refresh();
+        var memento = _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento");
+        memento.IsVisible = false;
+
+        memento.IsVisible = true;
+
+        Assert.That(_sidebar.Groups.Select(group => group.Name), Is.EqualTo(Expect.Seq("acme/gallery", "acme/memento")));
+        Assert.That(_hiddenStore.Hidden, Is.Empty);
+    }
+
+    [Test]
+    public async Task RemembersTheHiddenRepositoriesInTheStore()
+    {
+        await Refresh();
+
+        _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/gallery").IsVisible = false;
+
+        Assert.That(_hiddenStore.Hidden, Is.EquivalentTo(Expect.Seq("acme/gallery")));
+    }
+
+    [Test]
+    public async Task StartsWithTheRepositoriesTheStoreSaysAreHidden()
+    {
+        using var sidebar = CreateSidebarWith(new InMemoryHiddenRepositoryStore("acme/memento"));
+
+        await sidebar.RefreshCommand.ExecuteAsync(null);
+
+        Assert.That(sidebar.Groups.Select(group => group.Name), Is.EqualTo(Expect.Seq("acme/gallery")));
+        Assert.That(sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento").IsVisible, Is.False);
+    }
+
+    [Test]
+    public async Task KeepsARepositoryHiddenAcrossARefresh()
+    {
+        await Refresh();
+        _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento").IsVisible = false;
+
+        await Refresh();
+
+        Assert.That(_sidebar.Groups.Select(group => group.Name), Is.EqualTo(Expect.Seq("acme/gallery")));
+        Assert.That(_sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento").IsVisible, Is.False);
+    }
+
+    [Test]
+    public async Task CountsOnlyTheIssuesOfRepositoriesThatAreShown()
+    {
+        await Refresh();
+
+        _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento").IsVisible = false;
+
+        Assert.That(_sidebar.CountText, Is.EqualTo("1 open issue"));
+    }
+
+    [Test]
+    public async Task ShowsThatAFilterIsActiveOnlyWhileARepositoryIsHidden()
+    {
+        await Refresh();
+        Assert.That(_sidebar.IsFilterActive, Is.False);
+
+        var memento = _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento");
+        memento.IsVisible = false;
+
+        Assert.That(_sidebar.IsFilterActive, Is.True);
+
+        memento.IsVisible = true;
+
+        Assert.That(_sidebar.IsFilterActive, Is.False);
+        Assert.That(_sidebar.CountText, Is.EqualTo("3 open issues"));
+    }
+
+    [Test]
+    public async Task ClearingTheFiltersShowsEveryRepositoryAgainAndForgetsThemInTheStore()
+    {
+        await Refresh();
+        foreach (var filter in _sidebar.RepositoryFilters)
+        {
+            filter.IsVisible = false;
+        }
+
+        _sidebar.ClearFiltersCommand.Execute(null);
+
+        Assert.That(_sidebar.Groups.Select(group => group.Name), Is.EqualTo(Expect.Seq("acme/gallery", "acme/memento")));
+        Assert.That(_sidebar.RepositoryFilters, Has.All.Property(nameof(RepositoryFilterItemViewModel.IsVisible)).True);
+        Assert.That(_sidebar.IsFilterActive, Is.False);
+        Assert.That(_sidebar.IsEverythingHidden, Is.False);
+        Assert.That(_hiddenStore.Hidden, Is.Empty);
+    }
+
+    [Test]
+    public async Task SaysEverythingIsHiddenInsteadOfNoOpenIssuesWhenEveryRepositoryIsHidden()
+    {
+        await Refresh();
+
+        foreach (var filter in _sidebar.RepositoryFilters)
+        {
+            filter.IsVisible = false;
+        }
+
+        Assert.That(_sidebar.Groups, Is.Empty);
+        Assert.That(_sidebar.IsEverythingHidden, Is.True);
+        Assert.That(_sidebar.IsEmpty, Is.False);
     }
 
     [Test]
