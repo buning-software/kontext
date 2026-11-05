@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>Kontext.UiTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <KontextBinDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\src\Kontext\bin\$(Configuration)'))</KontextBinDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Lets the tests find the exe they drive; KONTEXT_EXE overrides it. -->
+    <AssemblyMetadata Include="KontextBinDirectory" Value="$(KontextBinDirectory)" />
+    <!-- Every test is a UI test: serialised on the desktop and tagged Category=UI. -->
+    <AssemblyAttribute Include="WinUia.NUnit.UiTestAttribute" />
+    <!-- UI Automation requires MTA. -->
+    <AssemblyAttribute Include="NUnit.Framework.ApartmentAttribute">
+      <_Parameter1>System.Threading.ApartmentState.MTA</_Parameter1>
+      <_Parameter1_IsLiteral>true</_Parameter1_IsLiteral>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitHubActionsTestLogger">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit.Analyzers">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NUnit3TestAdapter" />
+    <PackageReference Include="WinUia" />
+    <PackageReference Include="WinUia.NUnit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Builds the app first (same configuration) without referencing its assembly: the tests launch the exe. -->
+    <ProjectReference Include="..\..\src\Kontext\Kontext.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

@@ -157,6 +157,14 @@ public class ShellViewModelTests : ShellViewModelFixture
         Assert.That(Shell.Workspace.IsDetailVisible, Is.True);
     }
 
+    [Test]
+    public async Task ShowsTheSignedInUsernameOnTheRepositoryFilterAccountCard()
+    {
+        await SignInWithASavedTokenAsync();
+
+        Assert.That(Sidebar.RepositoryAccounts.Single().Title, Is.EqualTo($"{Shell.User!.Login} - github.com"));
+    }
+
     private async Task SignInWithASavedTokenAsync()
     {
         Build(savedToken: "ghp_saved");

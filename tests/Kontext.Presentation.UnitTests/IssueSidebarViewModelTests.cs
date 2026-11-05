@@ -367,6 +367,66 @@ public class IssueSidebarViewModelTests
     }
 
     [Test]
+    public async Task KeepsCollapsedGroupCollapsedAcrossRefresh()
+    {
+        await Refresh();
+        _sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded = false;
+
+        await Refresh();
+
+        Assert.That(_sidebar.Groups.Single(group => group.Name == "acme/memento").IsExpanded, Is.False);
+        Assert.That(_sidebar.Groups.Single(group => group.Name == "acme/gallery").IsExpanded, Is.True);
+    }
+
+    [Test]
+    public async Task RefreshUpdatesGroupsInPlaceWithoutResettingOrEmptyingThem()
+    {
+        await Refresh();
+        var groupsBefore = _sidebar.Groups.ToList();
+        var actions = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        var emptied = false;
+        _sidebar.Groups.CollectionChanged += (_, e) => actions.Add(e.Action);
+        foreach (var group in groupsBefore)
+        {
+            group.Items.CollectionChanged += (_, e) =>
+            {
+                actions.Add(e.Action);
+                emptied |= group.Items.Count == 0;
+            };
+        }
+
+        await Refresh();
+
+        Assert.That(actions, Has.No.Member(System.Collections.Specialized.NotifyCollectionChangedAction.Reset));
+        Assert.That(emptied, Is.False);
+        Assert.That(_sidebar.Groups, Is.EqualTo(groupsBefore));
+    }
+
+    [Test]
+    public async Task ReordersItemsInPlaceWhenActivityChanges()
+    {
+        var earlier = DateTimeOffset.Parse("2025-02-01T00:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        var later = DateTimeOffset.Parse("2025-02-20T00:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        _gitHub.Issues =
+        [
+            Issues.Create(4, "Add notifications", "acme/memento", updatedAt: later),
+            Issues.Create(3, "Bring project under UI test", "acme/memento", updatedAt: earlier),
+        ];
+        await Refresh();
+        var group = _sidebar.Groups.Single();
+
+        _gitHub.Issues =
+        [
+            Issues.Create(4, "Add notifications", "acme/memento", updatedAt: earlier),
+            Issues.Create(3, "Bring project under UI test", "acme/memento", updatedAt: later),
+        ];
+        await Refresh();
+
+        Assert.That(_sidebar.Groups.Single(), Is.SameAs(group));
+        Assert.That(group.Items.Select(item => item.Issue.Number), Is.EqualTo(Expect.Seq(3, 4)));
+    }
+
+    [Test]
     public async Task MarksWorktreesFromEarlierRunsAsReady()
     {
         _finder.Found.Add(new ExistingWorkspace(new RepositoryRef("acme", "memento"), 4, new WorktreeInfo(@"C:\wt\4", "kontext/4-add-notifications", "abc", IsMain: false)));
@@ -650,5 +710,192 @@ public class IssueSidebarViewModelTests
         _tracker.Report(item.Key, new IssueWorkState(IssueWorkStatus.Done));
 
         Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.NotStarted));
+    }
+
+    private const string Enterprise = "ghe.example.com";
+
+    private static GitHubIssue EnterpriseIssue(int number, string title, string repository)
+    {
+        var parts = repository.Split('/');
+        return Issues.Create(number, title, repository) with { Repository = new RepositoryRef(parts[0], parts[1], Host: Enterprise) };
+    }
+
+    private async Task RefreshWithAnEnterpriseRepository()
+    {
+        _gitHub.Issues = [.. _gitHub.Issues, EnterpriseIssue(7, "Rate limit the API", "team/api")];
+        await Refresh();
+    }
+
+    private RepositoryAccountFilterViewModel Account(string host) =>
+        _sidebar.RepositoryAccounts.Single(account => string.Equals(account.Host, host, StringComparison.OrdinalIgnoreCase));
+
+    [Test]
+    public async Task GroupsTheRepositoryFiltersByAccountWithGitHubFirst()
+    {
+        await RefreshWithAnEnterpriseRepository();
+
+        Assert.That(_sidebar.RepositoryAccounts.Select(account => account.Host), Is.EqualTo(Expect.Seq(GitHubHosts.Default, Enterprise)));
+        Assert.That(Account(GitHubHosts.Default).Repositories.Select(filter => filter.Name), Is.EqualTo(Expect.Seq("acme/gallery", "acme/memento")));
+        Assert.That(Account(Enterprise).Repositories.Select(filter => filter.Name), Is.EqualTo(Expect.Seq($"{Enterprise}/team/api")));
+    }
+
+    [Test]
+    public async Task ShowsEnterpriseRepositoriesWithoutTheServerInFrontOfTheirName()
+    {
+        await RefreshWithAnEnterpriseRepository();
+
+        Assert.That(Account(Enterprise).Repositories.Single().DisplayName, Is.EqualTo("team/api"));
+        Assert.That(Account(GitHubHosts.Default).Repositories.Select(filter => filter.DisplayName), Is.EqualTo(Expect.Seq("acme/gallery", "acme/memento")));
+    }
+
+    [Test]
+    public async Task ShowsTheSignedInUsernameOnTheAccountCard()
+    {
+        _sidebar.SetAccountLogin(GitHubHosts.Default, "octocat");
+        _sidebar.SetAccountLogin(Enterprise, "jelle.buning");
+
+        await RefreshWithAnEnterpriseRepository();
+
+        Assert.That(Account(GitHubHosts.Default).Title, Is.EqualTo("octocat - github.com"));
+        Assert.That(Account(Enterprise).Title, Is.EqualTo($"jelle.buning - {Enterprise}"));
+    }
+
+    [Test]
+    public async Task UpdatesTheUsernameOnAnOpenAccountCardWhenTheUserSignsIn()
+    {
+        await Refresh();
+        var account = Account(GitHubHosts.Default);
+        var changed = new List<string?>();
+        account.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        _sidebar.SetAccountLogin(GitHubHosts.Default, "octocat");
+
+        Assert.That(account.Title, Is.EqualTo("octocat - github.com"));
+        Assert.That(changed, Does.Contain(nameof(RepositoryAccountFilterViewModel.Title)));
+    }
+
+    [Test]
+    public async Task UncheckingAnAccountHidesAllItsRepositoriesAndRemembersThem()
+    {
+        await RefreshWithAnEnterpriseRepository();
+
+        Account(GitHubHosts.Default).AreAllVisible = false;
+
+        Assert.That(_sidebar.Groups.Select(group => group.Name), Is.EqualTo(Expect.Seq($"{Enterprise}/team/api")));
+        Assert.That(Account(GitHubHosts.Default).Repositories, Has.All.Property(nameof(RepositoryFilterItemViewModel.IsVisible)).False);
+        Assert.That(_hiddenStore.Hidden, Is.EquivalentTo(Expect.Seq("acme/gallery", "acme/memento")));
+        Assert.That(_hiddenStore.Saves, Is.EqualTo(1), "one save for the whole account, not one per repository");
+    }
+
+    [Test]
+    public async Task CheckingAnAccountShowsAllItsRepositoriesAgain()
+    {
+        await RefreshWithAnEnterpriseRepository();
+        Account(GitHubHosts.Default).AreAllVisible = false;
+
+        Account(GitHubHosts.Default).AreAllVisible = true;
+
+        Assert.That(_sidebar.Groups, Has.Count.EqualTo(3));
+        Assert.That(_hiddenStore.Hidden, Is.Empty);
+    }
+
+    [Test]
+    public async Task ShowsTheAccountAsPartlyCheckedWhenOnlySomeOfItsRepositoriesAreShown()
+    {
+        await RefreshWithAnEnterpriseRepository();
+        var account = Account(GitHubHosts.Default);
+        var changed = new List<string?>();
+        account.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        account.Repositories.Single(filter => filter.Name == "acme/memento").IsVisible = false;
+
+        Assert.That(account.AreAllVisible, Is.Null);
+        Assert.That(changed, Does.Contain(nameof(RepositoryAccountFilterViewModel.AreAllVisible)));
+        Assert.That(Account(Enterprise).AreAllVisible, Is.True, "other accounts are not affected");
+    }
+
+    [Test]
+    public async Task UpdatesTheRepositoryCheckboxesWhenTheirAccountIsUnchecked()
+    {
+        await Refresh();
+        var memento = Account(GitHubHosts.Default).Repositories.Single(filter => filter.Name == "acme/memento");
+        var changed = new List<string?>();
+        memento.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        Account(GitHubHosts.Default).AreAllVisible = false;
+
+        Assert.That(changed, Does.Contain(nameof(RepositoryFilterItemViewModel.IsVisible)));
+    }
+
+    [Test]
+    public async Task ShowsTheServerAsTitleForAnAccountWithoutAKnownUsername()
+    {
+        await RefreshWithAnEnterpriseRepository();
+
+        Assert.That(Account(Enterprise).Title, Is.EqualTo(Enterprise));
+    }
+
+    private RepositoryGroupViewModel MenuGroup(string name) => _sidebar.MenuGroups.Single(group => group.Name == name);
+
+    [Test]
+    public async Task KeepsAHiddenRepositoryInTheMenuButHidesItSoTheMenuNeverRebuildsItsRow()
+    {
+        await Refresh();
+        var memento = MenuGroup("acme/memento");
+
+        _sidebar.RepositoryFilters.Single(filter => filter.Name == "acme/memento").IsVisible = false;
+
+        Assert.That(_sidebar.MenuGroups.Select(group => group.Name), Is.EqualTo(Expect.Seq("acme/gallery", "acme/memento")));
+        Assert.That(MenuGroup("acme/memento"), Is.SameAs(memento));
+        Assert.That(memento.IsVisible, Is.False);
+        Assert.That(MenuGroup("acme/gallery").IsVisible, Is.True);
+        Assert.That(_sidebar.Groups.Select(group => group.Name), Is.EqualTo(Expect.Seq("acme/gallery")), "Groups still lists only what is shown");
+    }
+
+    [Test]
+    public async Task TogglingARepositoryFilterOnlyFlipsVisibilityAndKeepsTheExpandState()
+    {
+        await Refresh();
+        MenuGroup("acme/memento").IsExpanded = false;
+        var filter = _sidebar.RepositoryFilters.Single(candidate => candidate.Name == "acme/memento");
+        var menuChanges = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        _sidebar.MenuGroups.CollectionChanged += (_, e) => menuChanges.Add(e.Action);
+
+        filter.IsVisible = false;
+        filter.IsVisible = true;
+
+        Assert.That(menuChanges, Is.Empty, "no row is removed or inserted, so the menu has nothing to rebuild");
+        Assert.That(MenuGroup("acme/memento").IsVisible, Is.True);
+        Assert.That(MenuGroup("acme/memento").IsExpanded, Is.False);
+        Assert.That(MenuGroup("acme/gallery").IsExpanded, Is.True);
+    }
+
+    [Test]
+    public async Task HidesGroupsWithoutAMatchWhileSearchingAndLeavesTheirIssuesInPlace()
+    {
+        await Refresh();
+        var memento = MenuGroup("acme/memento");
+        var emptied = false;
+        memento.Items.CollectionChanged += (_, _) => emptied |= memento.Items.Count == 0;
+
+        _sidebar.SearchText = "galleries";
+
+        Assert.That(memento.IsVisible, Is.False);
+        Assert.That(emptied, Is.False, "a group whose children run out gets collapsed by the menu");
+        Assert.That(memento.Items, Has.Count.EqualTo(2));
+
+        _sidebar.SearchText = string.Empty;
+
+        Assert.That(memento.IsVisible, Is.True);
+    }
+
+    [Test]
+    public async Task ForgetsTheMenuGroupsWhenCleared()
+    {
+        await Refresh();
+
+        _sidebar.Clear();
+
+        Assert.That(_sidebar.MenuGroups, Is.Empty);
     }
 }

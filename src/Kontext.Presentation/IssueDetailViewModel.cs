@@ -92,6 +92,14 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(VisibleSession))]
     public partial bool IsConfirmingClear { get; set; }
 
+    /// <summary>
+    /// True while another page (the settings) covers the detail pane. The terminal is a native window that XAML cannot
+    /// hide by collapsing its parent, so no session is shown then.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleSession))]
+    public partial bool IsCovered { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasToolError))]
     public partial string? ToolError { get; set; }
@@ -100,7 +108,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
 
     public ITerminalSession? Session => Item is null ? null : _registry.Find(Item.Key);
 
-    public ITerminalSession? VisibleSession => ShowTerminalTab && !IsConfirmingClear ? Session : null;
+    public ITerminalSession? VisibleSession => ShowTerminalTab && !IsConfirmingClear && !IsCovered ? Session : null;
 
     public bool HasSession => Session is not null;
 

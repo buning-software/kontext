@@ -9,10 +9,10 @@ public class GitChangeRowTests
         => new(path, new FileChange(path, null, status, IsStaged: false, additions, deletions, IsBinary: false));
 
     [TestCase(FileChangeStatus.Modified, "M")]
-    [TestCase(FileChangeStatus.Added, "A")]
+    [TestCase(FileChangeStatus.Added, "+")]
     [TestCase(FileChangeStatus.Deleted, "D")]
     [TestCase(FileChangeStatus.Renamed, "R")]
-    [TestCase(FileChangeStatus.Untracked, "?")]
+    [TestCase(FileChangeStatus.Untracked, "+")]
     [TestCase(FileChangeStatus.Conflicted, "!")]
     public void ShowsTheStatusLetterForEachStatus(FileChangeStatus status, string letter)
     {

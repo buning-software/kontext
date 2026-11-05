@@ -11,10 +11,10 @@ public sealed record GitChangeRow(string Text, FileChange? Change)
     public string StatusLetter => Change?.Status switch
     {
         FileChangeStatus.Modified => "M",
-        FileChangeStatus.Added => "A",
+        // A new file is "+", staged or not.
+        FileChangeStatus.Added or FileChangeStatus.Untracked => "+",
         FileChangeStatus.Deleted => "D",
         FileChangeStatus.Renamed => "R",
-        FileChangeStatus.Untracked => "?",
         FileChangeStatus.Conflicted => "!",
         _ => string.Empty,
     };

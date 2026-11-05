@@ -12,7 +12,8 @@
                 IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
                 MenuItemsSource="{x:Bind Items}"
                 SelectsOnInvoked="False"
-                ToolTipService.ToolTip="{x:Bind Name}">
+                ToolTipService.ToolTip="{x:Bind Name}"
+                Visibility="{x:Bind IsVisible, Mode=OneWay}">
                 <TextBlock
                     VerticalAlignment="Center"
                     Text="{x:Bind Name}"
@@ -57,18 +58,20 @@
 
     <NavigationView
         x:Name="Navigation"
+        AutomationProperties.AutomationId="Sidebar"
         IsBackButtonVisible="Collapsed"
         IsPaneToggleButtonVisible="False"
         IsSettingsVisible="True"
         ItemInvoked="Navigation_ItemInvoked"
         SelectionChanged="Navigation_SelectionChanged"
         MenuItemTemplateSelector="{StaticResource SidebarTemplateSelector}"
-        MenuItemsSource="{x:Bind ViewModel.Workspace.Sidebar.Groups, Mode=OneWay}"
+        MenuItemsSource="{x:Bind ViewModel.Workspace.Sidebar.MenuGroups, Mode=OneWay}"
         OpenPaneLength="340"
         PaneDisplayMode="Left">
 
         <NavigationView.AutoSuggestBox>
             <AutoSuggestBox
+                AutomationProperties.AutomationId="SearchBox"
                 AutomationProperties.Name="Search issues"
                 PlaceholderText="Search issues"
                 QueryIcon="Find"
@@ -87,6 +90,7 @@
                         Orientation="Horizontal"
                         Spacing="8">
                         <TextBlock
+                            AutomationProperties.AutomationId="IssueCount"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource BodyTextBlockStyle}"
                             Text="{x:Bind ViewModel.Workspace.Sidebar.CountText, Mode=OneWay}" />
@@ -95,10 +99,11 @@
                             Style="{StaticResource BodyTextBlockStyle}"
                             Text="Signing in…"
                             Visibility="{x:Bind ViewModel.IsStarting, Mode=OneWay}" />
+                        <!-- While starting, the large ring in the content pane is the one loading indicator. -->
                         <ProgressRing
                             Width="14"
                             Height="14"
-                            IsActive="{x:Bind views:VisibilityFormat.Either(ViewModel.Workspace.Sidebar.IsLoading, ViewModel.IsStarting), Mode=OneWay}" />
+                            IsActive="{x:Bind views:VisibilityFormat.AndNot(ViewModel.Workspace.Sidebar.IsLoading, ViewModel.IsStarting), Mode=OneWay}" />
                     </StackPanel>
                     <StackPanel
                         Grid.Column="1"
@@ -106,6 +111,7 @@
                         Spacing="4">
                         <Button
                             Padding="8,4"
+                            AutomationProperties.AutomationId="FilterButton"
                             AutomationProperties.Name="Filter repositories"
                             ToolTipService.ToolTip="Filter repositories">
                             <Grid>
@@ -120,7 +126,8 @@
                                     Visibility="{x:Bind ViewModel.Workspace.Sidebar.IsFilterActive, Mode=OneWay}" />
                             </Grid>
                             <Button.Flyout>
-                                <Flyout Placement="Bottom">
+                                <!-- Windowed popup: the terminal is a native child window and would otherwise cover the flyout. -->
+                                <Flyout Placement="Bottom" ShouldConstrainToRootBounds="False">
                                     <StackPanel MinWidth="220" Spacing="4">
                                         <TextBlock
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -130,19 +137,49 @@
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                             Text="No repositories"
                                             Visibility="{x:Bind ViewModel.Workspace.Sidebar.HasNoRepositoryFilters, Mode=OneWay}" />
-                                        <ItemsControl ItemsSource="{x:Bind ViewModel.Workspace.Sidebar.RepositoryFilters}">
+                                        <!-- One card per account; its header checkbox shows or hides all of the account's repositories. -->
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.Workspace.Sidebar.RepositoryAccounts}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:RepositoryFilterItemViewModel">
-                                                    <CheckBox
-                                                        Content="{x:Bind Name}"
-                                                        IsChecked="{x:Bind IsVisible, Mode=TwoWay}"
-                                                        ToolTipService.ToolTip="{x:Bind Name}" />
+                                                <DataTemplate x:DataType="vm:RepositoryAccountFilterViewModel">
+                                                    <Border
+                                                        Margin="0,4"
+                                                        Padding="10,6,10,8"
+                                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6">
+                                                        <StackPanel>
+                                                            <CheckBox
+                                                                AutomationProperties.Name="{x:Bind Title, Mode=OneWay}"
+                                                                IsChecked="{x:Bind AreAllVisible, Mode=TwoWay}"
+                                                                ToolTipService.ToolTip="Show or hide all repositories of this account">
+                                                                <TextBlock FontWeight="SemiBold" Text="{x:Bind Title, Mode=OneWay}" />
+                                                            </CheckBox>
+                                                            <Rectangle
+                                                                Height="1"
+                                                                Margin="0,4"
+                                                                HorizontalAlignment="Stretch"
+                                                                Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+                                                            <ItemsControl ItemsSource="{x:Bind Repositories}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:RepositoryFilterItemViewModel">
+                                                                        <CheckBox
+                                                                            AutomationProperties.Name="{x:Bind Name}"
+                                                                            Content="{x:Bind DisplayName}"
+                                                                            IsChecked="{x:Bind IsVisible, Mode=TwoWay}"
+                                                                            ToolTipService.ToolTip="{x:Bind Name}" />
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                         <Button
                                             Margin="0,4,0,0"
                                             HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="ClearFiltersButton"
                                             Command="{x:Bind ViewModel.Workspace.Sidebar.ClearFiltersCommand}"
                                             Content="Clear filters"
                                             Visibility="{x:Bind ViewModel.Workspace.Sidebar.IsFilterActive, Mode=OneWay}" />
@@ -152,6 +189,7 @@
                         </Button>
                         <Button
                             Padding="8,4"
+                            AutomationProperties.AutomationId="RefreshButton"
                             AutomationProperties.Name="Refresh"
                             IsEnabled="{x:Bind views:VisibilityFormat.Not(ViewModel.IsStarting), Mode=OneWay}"
                             Command="{x:Bind ViewModel.Workspace.Sidebar.RefreshCommand}"

@@ -1,3 +1,4 @@
+using Kontext.Domain;
 using Kontext.TestSupport;
 using Microsoft.Extensions.Time.Testing;
 
@@ -15,6 +16,7 @@ public class WorkspaceViewModelTests
     private IssueSidebarViewModel _sidebar = null!;
     private IssueDetailViewModel _detail = null!;
     private WorkspaceViewModel _workspace = null!;
+    private InMemoryIssueSessionRegistry _registry = null!;
 
     [SetUp]
     public async Task CreateWorkspace()
@@ -30,7 +32,8 @@ public class WorkspaceViewModelTests
         };
 
         _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), _clock);
-        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), _clock, GitChangesOptions.Default));
+        _registry = new InMemoryIssueSessionRegistry();
+        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), _registry, _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), _clock, GitChangesOptions.Default));
         _workspace = new WorkspaceViewModel(_sidebar, _detail, _autoStart);
 
         await _sidebar.RefreshCommand.ExecuteAsync(null);
@@ -88,6 +91,27 @@ public class WorkspaceViewModelTests
         _workspace.IsSettingsOpen = false;
 
         Assert.That(_workspace.IsDetailVisible, Is.True);
+    }
+
+    [Test]
+    public void HidesTheRunningTerminalWhileTheSettingsAreOpen()
+    {
+        var item = ItemNumbered(4);
+        var session = new FakeTerminalSession(TerminalSessionId.New());
+        _registry.Register(item.Key, session);
+        _sidebar.SelectedItem = item;
+        Assert.That(_detail.VisibleSession, Is.SameAs(session));
+        var changed = new List<string?>();
+        _detail.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        _workspace.IsSettingsOpen = true;
+
+        Assert.That(_detail.VisibleSession, Is.Null, "the terminal is a native window and would otherwise cover the settings");
+        Assert.That(changed, Does.Contain(nameof(IssueDetailViewModel.VisibleSession)));
+
+        _workspace.IsSettingsOpen = false;
+
+        Assert.That(_detail.VisibleSession, Is.SameAs(session));
     }
 
     [Test]
