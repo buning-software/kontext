@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kontext")
             : overridden;
 
+        services.AddSingleton(new RefreshOptions(RefreshInterval(configuration)));
         services
             .AddKontextGitHub(new GitHubOptions(configuration["GitHub:ClientId"]))
             .AddKontextGitAutomation(new GitAutomationOptions(
@@ -68,6 +69,11 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    private static TimeSpan RefreshInterval(IConfiguration configuration) =>
+        int.TryParse(configuration["Refresh:IntervalSeconds"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var seconds) && seconds >= 0
+            ? TimeSpan.FromSeconds(seconds)
+            : RefreshOptions.Default.Interval;
 
     private static string ClaudeConfigDirectory()
     {

@@ -1,4 +1,4 @@
-using Kontext.Domain;
+﻿using Kontext.Domain;
 using Kontext.Kernel;
 using Kontext.TestSupport;
 
@@ -93,5 +93,29 @@ public class IssueSessionClearerTests
         Assert.That(state.Message, Is.EqualTo("the folder is in use"));
         Assert.That(state.WorktreePath, Is.EqualTo(Worktree.Path));
         Assert.That(_store.Find(Key), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task RetriesRemovingTheWorkspaceWhenTheFirstAttemptFails()
+    {
+        await ASessionIsOpenAsync();
+        var remover = new FlakyWorkspaceRemover(failures: 1);
+        var clearer = new IssueSessionClearer(_tracker, _store, _terminals, _registry, remover, TimeProvider.System);
+
+        await clearer.ClearAsync(_issue);
+
+        Assert.That(remover.Attempts, Is.EqualTo(2));
+        Assert.That(_tracker.StateOf(Key), Is.EqualTo(IssueWorkState.NotStarted));
+    }
+
+    private sealed class FlakyWorkspaceRemover(int failures) : Kontext.Contracts.IWorkspaceRemover
+    {
+        public int Attempts { get; private set; }
+
+        public Task RemoveAsync(RepositoryRef repository, string worktreePath, string branchName, CancellationToken cancellationToken = default)
+        {
+            Attempts++;
+            return Attempts <= failures ? Task.FromException(new TestKontextException("the folder is in use")) : Task.CompletedTask;
+        }
     }
 }
