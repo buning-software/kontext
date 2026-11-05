@@ -67,11 +67,27 @@ jobs:
       - name: Unit test
         run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.UnitTests."
 
-      - name: Integration test
-        run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.IntegrationTests."
-
       - name: Architecture test
         run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.ArchitectureTests.|FullyQualifiedName~.CompositionTests."
+
+  integration-test:
+    name: Run integration tests
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Download build output
+        uses: actions/download-artifact@v8
+        with:
+
+      - name: Integration test
+        run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.IntegrationTests."
 
   ui-test:
     name: Run UI tests
@@ -91,4 +107,4 @@ jobs:
           name: build-output
 
       - name: UI test
-        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName~.UiTests."
+        run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.UiTests."
