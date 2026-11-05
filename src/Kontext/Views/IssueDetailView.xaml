@@ -18,6 +18,7 @@
                 Source="ms-appx:///Assets/Kontext.png" />
             <TextBlock
                 HorizontalAlignment="Center"
+                AutomationProperties.AutomationId="NoIssueSelected"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Style="{StaticResource SubtitleTextBlockStyle}"
                 Text="Select an issue" />
@@ -45,6 +46,7 @@
 
                 <StackPanel Spacing="4">
                     <TextBlock
+                        AutomationProperties.AutomationId="IssueTitle"
                         Style="{StaticResource SubtitleTextBlockStyle}"
                         Text="{x:Bind ViewModel.Title, Mode=OneWay}"
                         TextWrapping="Wrap" />

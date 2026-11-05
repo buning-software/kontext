@@ -12,6 +12,7 @@ public class ClaudeLauncherTests
 
     private FakeClaudeTranscripts _transcripts = null!;
     private FakeClaudeHooks _hooks = null!;
+    private FakeClaudeLiveSessions _live = null!;
     private ClaudeLauncher _launcher = null!;
 
     [SetUp]
@@ -19,7 +20,33 @@ public class ClaudeLauncherTests
     {
         _transcripts = new FakeClaudeTranscripts();
         _hooks = new FakeClaudeHooks();
-        _launcher = new ClaudeLauncher(new ClaudeLaunchBuilder(new ClaudeOptions(@"C:\claude")), _transcripts, _hooks);
+        _live = new FakeClaudeLiveSessions();
+        _launcher = new ClaudeLauncher(new ClaudeLaunchBuilder(new ClaudeOptions(@"C:\claude")), _transcripts, _hooks, _live);
+    }
+
+    [Test]
+    public void RefusesToResumeASessionThatIsStillOpenInAnotherClaude()
+    {
+        var id = TerminalSessionId.New();
+        _transcripts.Saved.Add(id);
+        _live.Running[id] = 2356;
+
+        var refused = Assert.Throws<ClaudeSessionInUseException>(() => _launcher.Prepare(Stored(id), Worktree));
+
+        Assert.That(refused!.Message, Does.Contain("already open in another Claude window"));
+        Assert.That(refused, Is.InstanceOf<KontextException>(), "so the issue shows the reason instead of a crash");
+    }
+
+    [Test]
+    public void StartsAFreshSessionWithoutCheckingWhenThereIsNothingToResume()
+    {
+        var id = TerminalSessionId.New();
+        _live.Running[id] = 2356;
+
+        var launch = _launcher.Prepare(Stored(id), Worktree);
+
+        Assert.That(launch.Resumed, Is.False, "no transcript, so a new session with a new id starts");
+        Assert.That(launch.SessionId, Is.Not.EqualTo(id));
     }
 
     private static StoredSession Stored(TerminalSessionId id, string worktreePath = @"C:\wt\4-add")

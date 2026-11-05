@@ -1,7 +1,11 @@
 using System.ComponentModel;
+using System.Text;
+using Kontext.Domain;
 using Kontext.Presentation;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
+using Microsoft.UI.Xaml.Media;
 
 namespace Kontext.Views;
 
@@ -38,6 +42,7 @@ public sealed partial class GitChangesView : UserControl
         Bindings?.Update();
         SyncList();
         SyncLayout();
+        SyncDiff();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -45,6 +50,11 @@ public sealed partial class GitChangesView : UserControl
         if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName is nameof(GitChangesViewModel.Rows) or nameof(GitChangesViewModel.SelectedChange))
         {
             SyncList();
+        }
+
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(GitChangesViewModel.SelectedDiff))
+        {
+            SyncDiff();
         }
 
         if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(GitChangesViewModel.IsSplitView))
@@ -118,5 +128,62 @@ public sealed partial class GitChangesView : UserControl
 
     // Rows must be at least as wide as the viewport so their backgrounds reach the right edge.
     private void DiffScroller_SizeChanged(object sender, SizeChangedEventArgs e)
-        => DiffRepeater.MinWidth = Math.Max(0, e.NewSize.Width - 20);
+        => DiffContent.MinWidth = Math.Max(0, e.NewSize.Width - 20);
+
+    // The unified diff: all code in one RichTextBlock (one line break per diff line) so a selection can span lines and
+    // copies only code; numbers and signs in unselectable columns; one background row per line. All use DiffLineHeight.
+    private void SyncDiff()
+    {
+        var lines = ViewModel?.SelectedDiff?.Lines ?? [];
+        var oldNumbers = new StringBuilder();
+        var newNumbers = new StringBuilder();
+        var signs = new StringBuilder();
+        var code = new Paragraph();
+
+        DiffBackgrounds.Children.Clear();
+
+        for (var index = 0; index < lines.Count; index++)
+        {
+            var line = lines[index];
+            if (index > 0)
+            {
+                oldNumbers.Append('\n');
+                newNumbers.Append('\n');
+                signs.Append('\n');
+                code.Inlines.Add(new LineBreak());
+            }
+
+            oldNumbers.Append(GitViewFormat.Number(line.OldNumber));
+            newNumbers.Append(GitViewFormat.Number(line.NewNumber));
+            signs.Append(line.Kind switch
+            {
+                DiffLineKind.Added => '+',
+                DiffLineKind.Removed => '−',
+                _ => ' ',
+            });
+
+            var text = new Run { Text = line.Text };
+            if (line.Kind == DiffLineKind.HunkHeader && Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out var secondary))
+            {
+                text.Foreground = (Brush)secondary;
+            }
+
+            code.Inlines.Add(text);
+            DiffBackgrounds.Children.Add(new Border { Style = RowStyle(line.Kind) });
+        }
+
+        DiffOldNumbers.Text = oldNumbers.ToString();
+        DiffNewNumbers.Text = newNumbers.ToString();
+        DiffSigns.Text = signs.ToString();
+        DiffText.Blocks.Clear();
+        DiffText.Blocks.Add(code);
+    }
+
+    private Style RowStyle(DiffLineKind kind) => (Style)Resources[kind switch
+    {
+        DiffLineKind.Added => "DiffAddedRowStyle",
+        DiffLineKind.Removed => "DiffRemovedRowStyle",
+        DiffLineKind.HunkHeader => "DiffHunkRowStyle",
+        _ => "DiffRowStyle",
+    }];
 }

@@ -5,31 +5,23 @@ on:
   workflow_dispatch:
   workflow_call: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    # WinUI 3 (Kontext) and ConPTY (Kontext.TerminalHost) only build on Windows.
+    name: Build
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
-        with:
-         dotnet-version: '10.0.x'
+      - name: Setup
+        uses: ./.github/actions/setup
 
-      - name: Load nuget cache
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.nuget/packages
-            !~/.nuget/packages/unwanted
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Install dependencies
-        run: dotnet restore
+      - name: Check for unused usings
+        run: dotnet format style Kontext.slnx --diagnostics IDE0005 --severity info --verify-no-changes
 
       - name: Set GitHub OAuth client id
         if: ${{ vars.KONTEXT_GITHUB_CLIENT_ID != '' }}
@@ -45,5 +37,58 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release --logger GitHubActions
+      - name: Upload build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-output
+          path: |
+            src/*/bin/Release
+            tests/*/bin/Release
+          if-no-files-found: error
+          retention-days: 1
+
+  unit-test:
+    name: Run unit tests
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Download build output
+        uses: actions/download-artifact@v8
+        with:
+          name: build-output
+
+      - name: Unit test
+        run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.UnitTests."
+
+      - name: Integration test
+        run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.IntegrationTests."
+
+      - name: Architecture test
+        run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.ArchitectureTests.|FullyQualifiedName~.CompositionTests."
+
+  ui-test:
+    name: Run UI tests
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Download build output
+        uses: actions/download-artifact@v8
+        with:
+          name: build-output
+
+      - name: UI test
+        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName~.UiTests."

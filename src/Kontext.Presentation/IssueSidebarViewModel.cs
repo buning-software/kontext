@@ -21,6 +21,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     private readonly HashSet<string> _collapsed;
     private readonly LatestOnly _loads = new();
     private readonly Dictionary<string, RepositoryGroupViewModel> _groupsByName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _loginsByHost = new(StringComparer.OrdinalIgnoreCase);
 
     private List<IssueItemViewModel> _all = [];
     private Dictionary<IssueKey, IssueItemViewModel> _itemsByKey = [];
@@ -50,9 +51,19 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _tracker.Changed += OnTrackerChanged;
     }
 
+    /// <summary>The repository groups that are shown (not filtered out, with a search match).</summary>
     public ObservableCollection<RepositoryGroupViewModel> Groups { get; } = [];
 
+    /// <summary>
+    /// What the menu binds to: a group for every repository, filtered-out ones with <see cref="RepositoryGroupViewModel.IsVisible"/>
+    /// false, so filtering and searching never remove or insert menu rows.
+    /// </summary>
+    public ObservableCollection<RepositoryGroupViewModel> MenuGroups { get; } = [];
+
     public ObservableCollection<RepositoryFilterItemViewModel> RepositoryFilters { get; } = [];
+
+    /// <summary>The same filters as <see cref="RepositoryFilters"/>, as one card per account (github.com first).</summary>
+    public ObservableCollection<RepositoryAccountFilterViewModel> RepositoryAccounts { get; } = [];
 
     [ObservableProperty]
     public partial IssueItemViewModel? SelectedItem { get; set; }
@@ -95,7 +106,9 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _itemsByKey = [];
         _groupsByName.Clear();
         Groups.Clear();
+        MenuGroups.Clear();
         RepositoryFilters.Clear();
+        RepositoryAccounts.Clear();
         OnPropertyChanged(nameof(HasNoRepositoryFilters));
         OnPropertyChanged(nameof(IsFilterActive));
 
@@ -169,17 +182,81 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
 
     private bool IsHidden(IssueItemViewModel item) => _hidden.Contains(item.Issue.Repository.DisplayName);
 
+    /// <summary>Remembers who is signed in on <paramref name="host"/>, so its account card shows the username (null: signed out).</summary>
+    public void SetAccountLogin(string host, string? login)
+    {
+        if (login is null)
+        {
+            _loginsByHost.Remove(host);
+        }
+        else
+        {
+            _loginsByHost[host] = login;
+        }
+
+        foreach (var account in RepositoryAccounts.Where(account => string.Equals(account.Host, host, StringComparison.OrdinalIgnoreCase)))
+        {
+            account.SetLogin(login);
+        }
+    }
+
     private void RebuildRepositoryFilters()
     {
         RepositoryFilters.Clear();
+        RepositoryAccounts.Clear();
 
-        var names = _all.Select(item => item.Issue.Repository.DisplayName).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase);
-        foreach (var name in names)
+        var repositories = _all
+            .Select(item => item.Issue.Repository)
+            .DistinctBy(repository => repository.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(repository => repository.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var filters = repositories.ToDictionary(
+            repository => repository.DisplayName,
+            repository => new RepositoryFilterItemViewModel(repository.DisplayName, repository.FullName, isVisible: !_hidden.Contains(repository.DisplayName), OnRepositoryVisibilityChanged),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var filter in filters.Values)
         {
-            RepositoryFilters.Add(new RepositoryFilterItemViewModel(name, isVisible: !_hidden.Contains(name), OnRepositoryVisibilityChanged));
+            RepositoryFilters.Add(filter);
+        }
+
+        var accounts = repositories
+            .GroupBy(repository => repository.Host, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => GitHubHosts.IsDefault(group.Key) ? 0 : 1)
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var account in accounts)
+        {
+            RepositoryAccounts.Add(new RepositoryAccountFilterViewModel(
+                account.Key,
+                _loginsByHost.GetValueOrDefault(account.Key),
+                [.. account.Select(repository => filters[repository.DisplayName])],
+                SetAllVisible));
         }
 
         OnPropertyChanged(nameof(HasNoRepositoryFilters));
+    }
+
+    private void SetAllVisible(RepositoryAccountFilterViewModel account, bool visible)
+    {
+        foreach (var filter in account.Repositories)
+        {
+            filter.ShowWithoutReporting(visible);
+
+            if (visible)
+            {
+                _hidden.Remove(filter.Name);
+            }
+            else
+            {
+                _hidden.Add(filter.Name);
+            }
+        }
+
+        _hiddenRepositories.Save(_hidden);
+        account.RepositoriesChanged();
+        ApplyFilter();
     }
 
     [RelayCommand]
@@ -209,6 +286,12 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         }
 
         _hiddenRepositories.Save(_hidden);
+
+        foreach (var account in RepositoryAccounts.Where(account => account.Repositories.Contains(filter)))
+        {
+            account.RepositoriesChanged();
+        }
+
         ApplyFilter();
     }
 
@@ -258,27 +341,43 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     {
         var visible = _all.Where(item => !IsHidden(item) && IssueSearch.Matches(item.Issue, SearchText)).ToList();
 
-        var groups = IssueGrouper.Group(visible, item => item.Issue.Repository.DisplayName, item => item.Issue.UpdatedAt);
+        var shown = IssueGrouper.Group(visible, item => item.Issue.Repository.DisplayName, item => item.Issue.UpdatedAt)
+            .ToDictionary(group => group.Repository, StringComparer.OrdinalIgnoreCase);
 
-        Groups.Clear();
-        foreach (var group in groups)
+        var repositories = _all
+            .Select(item => item.Issue.Repository.DisplayName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase);
+
+        var menu = new List<RepositoryGroupViewModel>();
+        var desired = new List<RepositoryGroupViewModel>(shown.Count);
+        foreach (var repository in repositories)
         {
-            if (!_groupsByName.TryGetValue(group.Repository, out var viewModel))
+            var group = shown.GetValueOrDefault(repository);
+            if (!_groupsByName.TryGetValue(repository, out var viewModel))
             {
-                viewModel = new RepositoryGroupViewModel(group.Repository, group.Items, !_collapsed.Contains(group.Repository), OnGroupExpandedChanged);
-                _groupsByName[group.Repository] = viewModel;
+                viewModel = new RepositoryGroupViewModel(repository, group?.Items ?? [], !_collapsed.Contains(repository), OnGroupExpandedChanged);
+                _groupsByName[repository] = viewModel;
             }
-            else
+            else if (group is not null)
             {
-                viewModel.Items.Clear();
-                foreach (var item in group.Items)
-                {
-                    viewModel.Items.Add(item);
-                }
+                // A hidden group keeps its last issues: a menu group whose children run out gets collapsed by the menu.
+                viewModel.SyncItems(group.Items);
             }
 
-            Groups.Add(viewModel);
+            viewModel.IsVisible = group is not null;
+            menu.Add(viewModel);
+            if (group is not null)
+            {
+                desired.Add(viewModel);
+            }
         }
+
+        CollectionSync.SyncInPlace(Groups, desired);
+
+        // The menu keeps a row for every repository and only hides the filtered ones. Removing and re-inserting rows made
+        // the NavigationView rebuild them, and a rebuilt row could show a different expand state than its group has.
+        CollectionSync.SyncInPlace(MenuGroups, menu);
 
         CountText = BuildCountText(visible.Count);
         OnPropertyChanged(nameof(IsEmpty));

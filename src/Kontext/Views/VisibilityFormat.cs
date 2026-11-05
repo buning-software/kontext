@@ -11,7 +11,7 @@ public static class VisibilityFormat
 
     public static Visibility VisibleWhenNot(bool value, bool not) => value && !not ? Visibility.Visible : Visibility.Collapsed;
 
-    public static bool Either(bool first, bool second) => first || second;
+    public static bool AndNot(bool value, bool not) => value && !not;
 
     public static bool Not(bool value) => !value;
 }

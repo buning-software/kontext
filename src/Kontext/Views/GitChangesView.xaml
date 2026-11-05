@@ -19,12 +19,30 @@
             </ResourceDictionary>
         </ResourceDictionary.ThemeDictionaries>
 
+        <!-- Every layer of the unified diff (numbers, signs, text, row colours) uses this line height so they line up. -->
+        <x:Double x:Key="DiffLineHeight">19</x:Double>
+
         <Style x:Key="DiffGutterStyle" TargetType="TextBlock">
             <Setter Property="Width" Value="44" />
             <Setter Property="FontFamily" Value="Consolas" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="LineHeight" Value="{StaticResource DiffLineHeight}" />
+            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
             <Setter Property="Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}" />
+        </Style>
+
+        <Style x:Key="DiffRowStyle" TargetType="Border">
+            <Setter Property="Height" Value="{StaticResource DiffLineHeight}" />
+        </Style>
+        <Style x:Key="DiffAddedRowStyle" BasedOn="{StaticResource DiffRowStyle}" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource DiffAddedBackgroundBrush}" />
+        </Style>
+        <Style x:Key="DiffRemovedRowStyle" BasedOn="{StaticResource DiffRowStyle}" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource DiffRemovedBackgroundBrush}" />
+        </Style>
+        <Style x:Key="DiffHunkRowStyle" BasedOn="{StaticResource DiffRowStyle}" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
         </Style>
 
         <Style x:Key="DiffCodeStyle" TargetType="TextBlock">
@@ -37,6 +55,8 @@
         <Style x:Key="DiffSignStyle" BasedOn="{StaticResource DiffCodeStyle}" TargetType="TextBlock">
             <Setter Property="Width" Value="12" />
             <Setter Property="IsTextSelectionEnabled" Value="False" />
+            <Setter Property="LineHeight" Value="{StaticResource DiffLineHeight}" />
+            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
             <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
         </Style>
 
@@ -106,94 +126,9 @@
             </Grid>
         </DataTemplate>
 
-        <DataTemplate x:Key="AddedLineTemplate" x:DataType="domain:DiffLine">
-            <Grid
-                Padding="8,0"
-                Background="{ThemeResource DiffAddedBackgroundBrush}"
-                ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(OldNumber)}" />
-                <TextBlock
-                    Grid.Column="1"
-                    Style="{StaticResource DiffGutterStyle}"
-                    Text="{x:Bind views:GitViewFormat.Number(NewNumber)}" />
-                <TextBlock
-                    Grid.Column="2"
-                    Style="{StaticResource DiffSignStyle}"
-                    Text="+" />
-                <TextBlock
-                    Grid.Column="3"
-                    Style="{StaticResource DiffCodeStyle}"
-                    Text="{x:Bind Text}" />
-            </Grid>
-        </DataTemplate>
 
-        <DataTemplate x:Key="RemovedLineTemplate" x:DataType="domain:DiffLine">
-            <Grid
-                Padding="8,0"
-                Background="{ThemeResource DiffRemovedBackgroundBrush}"
-                ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(OldNumber)}" />
-                <TextBlock
-                    Grid.Column="1"
-                    Style="{StaticResource DiffGutterStyle}"
-                    Text="{x:Bind views:GitViewFormat.Number(NewNumber)}" />
-                <TextBlock
-                    Grid.Column="2"
-                    Style="{StaticResource DiffSignStyle}"
-                    Text="&#x2212;" />
-                <TextBlock
-                    Grid.Column="3"
-                    Style="{StaticResource DiffCodeStyle}"
-                    Text="{x:Bind Text}" />
-            </Grid>
-        </DataTemplate>
 
-        <DataTemplate x:Key="ContextLineTemplate" x:DataType="domain:DiffLine">
-            <Grid Padding="8,0" ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Style="{StaticResource DiffGutterStyle}" Text="{x:Bind views:GitViewFormat.Number(OldNumber)}" />
-                <TextBlock
-                    Grid.Column="1"
-                    Style="{StaticResource DiffGutterStyle}"
-                    Text="{x:Bind views:GitViewFormat.Number(NewNumber)}" />
-                <TextBlock
-                    Grid.Column="2"
-                    Style="{StaticResource DiffSignStyle}"
-                    Text=" " />
-                <TextBlock
-                    Grid.Column="3"
-                    Style="{StaticResource DiffCodeStyle}"
-                    Text="{x:Bind Text}" />
-            </Grid>
-        </DataTemplate>
 
-        <DataTemplate x:Key="HunkLineTemplate" x:DataType="domain:DiffLine">
-            <Grid
-                Padding="8,2"
-                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                <TextBlock
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{StaticResource DiffCodeStyle}"
-                    Text="{x:Bind Text}" />
-            </Grid>
-        </DataTemplate>
 
         <Style x:Key="DiffWrappedCodeStyle" BasedOn="{StaticResource DiffCodeStyle}" TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
@@ -296,12 +231,6 @@
             FileStyle="{StaticResource GitFileItemStyle}"
             HeaderStyle="{StaticResource GitHeaderItemStyle}" />
 
-        <views:DiffLineTemplateSelector
-            x:Key="DiffLineTemplateSelector"
-            AddedTemplate="{StaticResource AddedLineTemplate}"
-            ContextTemplate="{StaticResource ContextLineTemplate}"
-            HunkTemplate="{StaticResource HunkLineTemplate}"
-            RemovedTemplate="{StaticResource RemovedLineTemplate}" />
       </ResourceDictionary>
     </UserControl.Resources>
 
@@ -362,6 +291,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="2">
                         <TextBlock
+                            IsTextSelectionEnabled="True"
                             Style="{StaticResource BodyStrongTextBlockStyle}"
                             Text="{x:Bind views:GitViewFormat.Title(ViewModel.SelectedChange), Mode=OneWay}"
                             TextTrimming="CharacterEllipsis" />
@@ -390,6 +320,11 @@
                 </Grid>
             </Border>
 
+            <!--
+                The unified diff is one RichTextBlock so a selection can run across lines, starting and ending anywhere.
+                The line numbers and signs are separate, unselectable columns, and the row colours a layer behind them;
+                every layer uses the same fixed line height so they stay aligned. Built in code from the diff lines.
+            -->
             <ScrollViewer
                 x:Name="DiffScroller"
                 Grid.Row="1"
@@ -398,10 +333,36 @@
                 SizeChanged="DiffScroller_SizeChanged"
                 VerticalScrollBarVisibility="Auto"
                 Visibility="{x:Bind views:VisibilityFormat.VisibleWhenNot(ViewModel.HasSelectedChange, ViewModel.IsSplitView), Mode=OneWay}">
-                <ItemsRepeater
-                    x:Name="DiffRepeater"
-                    ItemTemplate="{StaticResource DiffLineTemplateSelector}"
-                    ItemsSource="{x:Bind ViewModel.SelectedDiff.Lines, Mode=OneWay}" />
+                <Grid x:Name="DiffContent">
+                    <StackPanel x:Name="DiffBackgrounds" />
+                    <Grid Padding="8,0" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="DiffOldNumbers" Style="{StaticResource DiffGutterStyle}" />
+                        <TextBlock
+                            x:Name="DiffNewNumbers"
+                            Grid.Column="1"
+                            Style="{StaticResource DiffGutterStyle}" />
+                        <TextBlock
+                            x:Name="DiffSigns"
+                            Grid.Column="2"
+                            Style="{StaticResource DiffSignStyle}" />
+                        <RichTextBlock
+                            x:Name="DiffText"
+                            Grid.Column="3"
+                            AutomationProperties.Name="Diff"
+                            FontFamily="Consolas"
+                            FontSize="13"
+                            IsTextSelectionEnabled="True"
+                            LineHeight="{StaticResource DiffLineHeight}"
+                            LineStackingStrategy="BlockLineHeight"
+                            TextWrapping="NoWrap" />
+                    </Grid>
+                </Grid>
             </ScrollViewer>
 
             <ScrollViewer

@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
         services.AddSingleton<ClaudeLaunchBuilder>();
         services.AddSingleton<IClaudeTranscripts, ClaudeTranscripts>();
+        services.AddSingleton<IClaudeLiveSessions, ClaudeLiveSessions>();
         services.AddSingleton<IClaudeHookServer, LoopbackClaudeHookServer>();
         services.AddSingleton<ClaudeActivityReporter>();
         services.AddSingleton<IClaudeHooks, ClaudeHooks>();

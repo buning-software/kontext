@@ -3,7 +3,7 @@ using Kontext.Domain;
 
 namespace Kontext.Claude;
 
-internal sealed class ClaudeLauncher(ClaudeLaunchBuilder launch, IClaudeTranscripts transcripts, IClaudeHooks hooks) : IClaudeLauncher
+internal sealed class ClaudeLauncher(ClaudeLaunchBuilder launch, IClaudeTranscripts transcripts, IClaudeHooks hooks, IClaudeLiveSessions live) : IClaudeLauncher
 {
     public ClaudeLaunch Prepare(StoredSession? earlier, WorktreeInfo worktree)
     {
@@ -14,6 +14,12 @@ internal sealed class ClaudeLauncher(ClaudeLaunchBuilder launch, IClaudeTranscri
             && transcripts.Exists(earlier.SessionId)
             ? earlier
             : null;
+
+        // Claude refuses (exit code 1) to resume a session another Claude has open, so say why instead.
+        if (resumable is not null && live.FindRunningProcess(resumable.SessionId) is not null)
+        {
+            throw new ClaudeSessionInUseException();
+        }
 
         var id = resumable?.SessionId ?? TerminalSessionId.New();
         var settings = hooks.SettingsFor(id);

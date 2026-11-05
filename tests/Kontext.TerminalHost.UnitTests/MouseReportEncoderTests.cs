@@ -19,9 +19,10 @@ public class MouseReportEncoderTests
         Assert.That(report, Is.EqualTo("\u001b[<0;12;5m"));
     }
 
-    [TestCase(MouseButton.Left, "\u001b[<0;3;4M")]
-    [TestCase(MouseButton.Middle, "\u001b[<1;3;4M")]
-    [TestCase(MouseButton.Right, "\u001b[<2;3;4M")]
+    // Named after the button only: an escape character in a test name makes name filters (dotnet test --filter) skip the case.
+    [TestCase(MouseButton.Left, "\u001b[<0;3;4M", TestName = "{m}({0})")]
+    [TestCase(MouseButton.Middle, "\u001b[<1;3;4M", TestName = "{m}({0})")]
+    [TestCase(MouseButton.Right, "\u001b[<2;3;4M", TestName = "{m}({0})")]
     public void NumbersEachButton(MouseButton button, string expected)
     {
         Assert.That(MouseReportEncoder.Encode(button, MouseAction.Press, 3, 4, MouseModifiers.None, sgr: true), Is.EqualTo(expected));

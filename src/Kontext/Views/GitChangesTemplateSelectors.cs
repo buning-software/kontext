@@ -59,27 +59,3 @@ public sealed class SplitCellTemplateSelector : DataTemplateSelector
 
     protected override DataTemplate? SelectTemplateCore(object item, DependencyObject container) => SelectTemplateCore(item);
 }
-
-/// <summary>Picks the template (and so the background) for one line of a diff.</summary>
-public sealed class DiffLineTemplateSelector : DataTemplateSelector
-{
-    public DataTemplate? AddedTemplate { get; set; }
-
-    public DataTemplate? RemovedTemplate { get; set; }
-
-    public DataTemplate? ContextTemplate { get; set; }
-
-    public DataTemplate? HunkTemplate { get; set; }
-
-    protected override DataTemplate? SelectTemplateCore(object item) => item is DiffLine line
-        ? line.Kind switch
-        {
-            DiffLineKind.Added => AddedTemplate,
-            DiffLineKind.Removed => RemovedTemplate,
-            DiffLineKind.HunkHeader => HunkTemplate,
-            _ => ContextTemplate,
-        }
-        : ContextTemplate;
-
-    protected override DataTemplate? SelectTemplateCore(object item, DependencyObject container) => SelectTemplateCore(item);
-}

@@ -26,6 +26,8 @@ public sealed partial class WorkspaceViewModel : ObservableObject
 
     public bool IsDetailVisible => !IsSettingsOpen;
 
+    partial void OnIsSettingsOpenChanged(bool value) => Detail.IsCovered = value;
+
     private void OnSidebarPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(IssueSidebarViewModel.SelectedItem))

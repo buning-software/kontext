@@ -247,6 +247,16 @@ public sealed partial class ShellViewModel(
         Workspace.IsSettingsOpen = false;
     }
 
+    partial void OnUserChanged(GitHubUser? value) => Workspace.Sidebar.SetAccountLogin(GitHubHosts.Default, value?.Login);
+
+    partial void OnEnterpriseUserChanged(GitHubUser? oldValue, GitHubUser? newValue)
+    {
+        if ((newValue ?? oldValue) is { } user)
+        {
+            Workspace.Sidebar.SetAccountLogin(user.Host, newValue?.Login);
+        }
+    }
+
     private void ShowUser(GitHubUser user)
     {
         if (GitHubHosts.IsDefault(user.Host))

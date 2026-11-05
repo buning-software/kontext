@@ -15,5 +15,7 @@
     <PackageVersion Include="NUnit.Analyzers" Version="4.15.0" />
     <PackageVersion Include="NUnit3TestAdapter" Version="6.3.1" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
+    <PackageVersion Include="WinUia" Version="0.2.0" />
+    <PackageVersion Include="WinUia.NUnit" Version="0.2.0" />
   </ItemGroup>
 </Project>

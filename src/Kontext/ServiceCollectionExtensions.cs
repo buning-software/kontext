@@ -10,6 +10,7 @@ using Kontext.Sessions;
 using Kontext.Terminal;
 using Kontext.TerminalHost;
 using Kontext.Tray;
+using Kontext.UiTesting;
 using Kontext.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,6 +60,11 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<ShellPage>();
         services.AddSingleton<MainWindow>();
+
+        if (UiTestServiceCollectionExtensions.IsEnabled)
+        {
+            services.AddKontextUiTestFakes();
+        }
 
         return services;
     }
