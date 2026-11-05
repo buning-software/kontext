@@ -17,6 +17,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     private readonly ICollapsedRepositoryStore _collapsedRepositories;
     private readonly ISessionStore _sessions;
     private readonly TimeProvider _clock;
+    private readonly RefreshOptions _refreshOptions;
     private readonly HashSet<string> _hidden;
     private readonly HashSet<string> _collapsed;
     private readonly LatestOnly _loads = new();
@@ -25,6 +26,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
 
     private List<IssueItemViewModel> _all = [];
     private Dictionary<IssueKey, IssueItemViewModel> _itemsByKey = [];
+    private CancellationTokenSource? _autoRefresh;
+    private int _removals;
     private bool _loadedOnce;
 
     public IssueSidebarViewModel(
@@ -35,7 +38,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         IHiddenRepositoryStore hiddenRepositories,
         ICollapsedRepositoryStore collapsedRepositories,
         ISessionStore sessions,
-        TimeProvider clock)
+        TimeProvider clock,
+        RefreshOptions? refreshOptions = null)
     {
         _gitHub = gitHub;
         _tracker = tracker;
@@ -45,6 +49,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _collapsedRepositories = collapsedRepositories;
         _sessions = sessions;
         _clock = clock;
+        _refreshOptions = refreshOptions ?? new RefreshOptions(TimeSpan.Zero);
         _hidden = new HashSet<string>(hiddenRepositories.Load(), StringComparer.OrdinalIgnoreCase);
         _collapsed = new HashSet<string>(collapsedRepositories.Load(), StringComparer.OrdinalIgnoreCase);
 
@@ -95,11 +100,13 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     public void Dispose()
     {
         _tracker.Changed -= OnTrackerChanged;
+        StopAutoRefresh();
         _loads.Dispose();
     }
 
     public void Clear()
     {
+        StopAutoRefresh();
         _loads.CancelCurrent();
 
         _all = [];
@@ -125,11 +132,59 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task RefreshAsync()
     {
+        StartAutoRefresh();
+        await LoadAsync(silent: false);
+    }
+
+    private void StartAutoRefresh()
+    {
+        if (!_refreshOptions.IsEnabled || _autoRefresh is not null)
+        {
+            return;
+        }
+
+        _autoRefresh = new CancellationTokenSource();
+        _ = RunAutoRefreshAsync(_autoRefresh.Token);
+    }
+
+    private void StopAutoRefresh()
+    {
+        _autoRefresh?.Cancel();
+        _autoRefresh?.Dispose();
+        _autoRefresh = null;
+    }
+
+    private async Task RunAutoRefreshAsync(CancellationToken token)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(_refreshOptions.Interval, _clock);
+            while (await timer.WaitForNextTickAsync(token))
+            {
+                await LoadAsync(silent: true);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task LoadAsync(bool silent)
+    {
+        if (silent && IsLoading)
+        {
+            return;
+        }
+
         var load = _loads.Begin();
         var token = load.Token;
+        var removals = _removals;
 
-        IsLoading = true;
-        ErrorMessage = null;
+        if (!silent)
+        {
+            IsLoading = true;
+            ErrorMessage = null;
+        }
 
         try
         {
@@ -139,9 +194,15 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
             var withWorkspace = await _workspaceIssues.FindMissingAsync(open, workspaces, token);
             token.ThrowIfCancellationRequested();
 
+            if (silent && removals != _removals)
+            {
+                return;
+            }
+
             Show([.. open, .. withWorkspace]);
             MarkExistingWorkspaces(workspaces);
             _loadedOnce = true;
+            ErrorMessage = null;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -151,14 +212,17 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            ErrorMessage = ex.Message;
-            _all = [];
-            _itemsByKey = [];
-            RebuildRepositoryFilters();
-            ApplyFilter();
+            if (!silent)
+            {
+                ErrorMessage = ex.Message;
+                _all = [];
+                _itemsByKey = [];
+                RebuildRepositoryFilters();
+                ApplyFilter();
+            }
         }
 
-        if (_loads.IsCurrent(load))
+        if (!silent && _loads.IsCurrent(load))
         {
             IsLoading = false;
         }
@@ -429,6 +493,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
             SelectedItem = null;
         }
 
+        _removals++;
         _all.Remove(item);
         _itemsByKey.Remove(item.Key);
         ApplyFilter();
