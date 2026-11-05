@@ -85,6 +85,7 @@ jobs:
       - name: Download build output
         uses: actions/download-artifact@v8
         with:
+          name: build-output
 
       - name: Integration test
         run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.IntegrationTests."
