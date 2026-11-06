@@ -16,6 +16,9 @@ internal static class UiTestServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<IGitHubTokenStore, UiTestTokenStore>());
         services.Replace(ServiceDescriptor.Singleton<IGitHubService, UiTestGitHubService>());
         services.Replace(ServiceDescriptor.Singleton<IIssueSessionCoordinator, UiTestSessionCoordinator>());
+        services.AddSingleton<UiTestWorkspace>();
+        services.Replace(ServiceDescriptor.Singleton<IWorkspaceChanges>(provider => provider.GetRequiredService<UiTestWorkspace>()));
+        services.Replace(ServiceDescriptor.Singleton<IWorkspaceCommitter>(provider => provider.GetRequiredService<UiTestWorkspace>()));
         return services;
     }
 }

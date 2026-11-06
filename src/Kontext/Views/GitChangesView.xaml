@@ -90,18 +90,26 @@
         <DataTemplate x:Key="GitFileTemplate" x:DataType="vm:GitChangeRow">
             <Grid AutomationProperties.Name="{x:Bind Text}" ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="16" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
+                <CheckBox
+                    MinWidth="0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="GitFileCheck"
+                    AutomationProperties.Name="{x:Bind Text}"
+                    IsChecked="{x:Bind IsChecked, Mode=TwoWay}" />
                 <TextBlock
+                    Grid.Column="1"
                     VerticalAlignment="Center"
                     FontFamily="Consolas"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="{x:Bind StatusLetter}" />
                 <TextBlock
-                    Grid.Column="1"
+                    Grid.Column="2"
                     VerticalAlignment="Center"
                     TextTrimming="CharacterEllipsis"
                     ToolTipService.ToolTip="{x:Bind Text}">
@@ -109,7 +117,7 @@
                     <Run Foreground="{ThemeResource TextFillColorTertiaryBrush}" Text="{x:Bind Folder}" />
                 </TextBlock>
                 <StackPanel
-                    Grid.Column="2"
+                    Grid.Column="3"
                     VerticalAlignment="Center"
                     Orientation="Horizontal"
                     Spacing="6"
@@ -246,6 +254,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <InfoBar
@@ -254,13 +263,25 @@
                 IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                 Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                 Severity="Error" />
-            <TextBlock
+            <StackPanel
                 Grid.Row="1"
-                Margin="12,8"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Style="{StaticResource CaptionTextBlockStyle}"
-                Text="{x:Bind ViewModel.Summary, Mode=OneWay}"
-                Visibility="{x:Bind views:GitViewFormat.VisibleWhenText(ViewModel.Summary), Mode=OneWay}" />
+                Margin="12,4,12,0"
+                Orientation="Horizontal"
+                Spacing="4"
+                Visibility="{x:Bind views:GitViewFormat.VisibleWhenText(ViewModel.Summary), Mode=OneWay}">
+                <CheckBox
+                    MinWidth="0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="GitSelectAll"
+                    AutomationProperties.Name="Select all files"
+                    IsChecked="{x:Bind ViewModel.AllChecked, Mode=TwoWay}"
+                    IsEnabled="{x:Bind views:VisibilityFormat.Not(ViewModel.IsBusy), Mode=OneWay}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.Summary, Mode=OneWay}" />
+            </StackPanel>
             <ListView
                 x:Name="FileList"
                 Grid.Row="2"
@@ -269,6 +290,71 @@
                 ItemTemplateSelector="{StaticResource GitRowTemplateSelector}"
                 SelectionChanged="FileList_SelectionChanged"
                 SelectionMode="Single" />
+
+            <StackPanel
+                Grid.Row="3"
+                Padding="12"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0"
+                Spacing="8">
+                <InfoBar
+                    AutomationProperties.AutomationId="GitActionError"
+                    AutomationProperties.Name="{x:Bind ViewModel.ActionError, Mode=OneWay}"
+                    IsClosable="False"
+                    IsOpen="{x:Bind ViewModel.HasActionError, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.ActionError, Mode=OneWay}"
+                    Severity="Error" />
+                <InfoBar
+                    AutomationProperties.AutomationId="GitStatusMessage"
+                    AutomationProperties.Name="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                    IsClosable="False"
+                    IsOpen="{x:Bind ViewModel.HasStatusMessage, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                    Severity="Success" />
+                <TextBox
+                    MinHeight="72"
+                    AcceptsReturn="True"
+                    AutomationProperties.AutomationId="GitCommitMessage"
+                    AutomationProperties.Name="Commit message"
+                    IsEnabled="{x:Bind views:VisibilityFormat.Not(ViewModel.IsBusy), Mode=OneWay}"
+                    PlaceholderText="Commit message"
+                    Text="{x:Bind ViewModel.CommitMessage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    TextWrapping="Wrap" />
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        x:Name="CommitButton"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.AutomationId="GitCommitButton"
+                        Command="{x:Bind ViewModel.CommitCommand, Mode=OneWay}"
+                        Content="Commit"
+                        Style="{StaticResource AccentButtonStyle}">
+                    </Button>
+                    <Button
+                        Grid.Column="1"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.AutomationId="GitPushButton"
+                        Command="{x:Bind ViewModel.PushCommand, Mode=OneWay}"
+                        Content="{x:Bind views:GitViewFormat.PushLabel(ViewModel.UnpushedCount), Mode=OneWay}" />
+                </Grid>
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}">
+                    <ProgressRing
+                        Width="16"
+                        Height="16"
+                        IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        AutomationProperties.AutomationId="GitBusyText"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind ViewModel.BusyText, Mode=OneWay}" />
+                </StackPanel>
+            </StackPanel>
         </Grid>
 
         <Border Grid.Column="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" />

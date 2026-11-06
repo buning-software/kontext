@@ -11,6 +11,7 @@ public class GitChangesViewModelTests
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(3);
 
     private FakeWorkspaceChanges _fake = null!;
+    private FakeWorkspaceCommitter _committer = null!;
     private FakeTimeProvider _clock = null!;
     private GitChangesViewModel _vm = null!;
 
@@ -18,8 +19,9 @@ public class GitChangesViewModelTests
     public void CreateViewModel()
     {
         _fake = new FakeWorkspaceChanges();
+        _committer = new FakeWorkspaceCommitter();
         _clock = new FakeTimeProvider();
-        _vm = new GitChangesViewModel(_fake, _clock, new GitChangesOptions(Interval));
+        _vm = new GitChangesViewModel(_fake, _committer, _clock, new GitChangesOptions(Interval));
     }
 
     [TearDown]
@@ -461,5 +463,206 @@ public class GitChangesViewModelTests
 
         Assert.That(_vm.Rows.Select(row => row.Text), Does.Not.Contain("stale.cs"));
         Assert.That(_vm.SelectedChange?.Path, Is.EqualTo("fresh.cs"));
+    }
+
+    private GitChangeRow FileRow(string path) => _vm.Rows.First(row => row.Change?.Path == path);
+
+    private async Task LoadTwoFiles()
+    {
+        _fake.Changes = Unstaged(Change("a.cs"), Change("b.cs"));
+        Activate();
+        await WaitForLoaded();
+    }
+
+    [Test]
+    public async Task CommitIsDisabledWithoutASelectionOrAMessage()
+    {
+        await LoadTwoFiles();
+        Assert.That(_vm.CommitCommand.CanExecute(null), Is.False);
+
+        FileRow("a.cs").IsChecked = true;
+        Assert.That(_vm.CommitCommand.CanExecute(null), Is.False, "no message yet");
+
+        _vm.CommitMessage = "   ";
+        Assert.That(_vm.CommitCommand.CanExecute(null), Is.False, "blank message");
+
+        _vm.CommitMessage = "Fix a";
+        Assert.That(_vm.CommitCommand.CanExecute(null), Is.True);
+
+        FileRow("a.cs").IsChecked = false;
+        Assert.That(_vm.CommitCommand.CanExecute(null), Is.False, "selection removed");
+    }
+
+    [Test]
+    public async Task CommitsOnlyTheCheckedFilesAndResetsTheForm()
+    {
+        await LoadTwoFiles();
+        FileRow("b.cs").IsChecked = true;
+        _vm.CommitMessage = " Fix b ";
+        _committer.OnCommitted = _ => _fake.Changes = Unstaged(Change("a.cs"));
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => _vm.StatusMessage is not null, "the commit to finish");
+
+        Assert.That(_committer.Commits, Has.Count.EqualTo(1));
+        Assert.That(_committer.Commits[0].Changes.Select(change => change.Path).Single(), Is.EqualTo("b.cs"));
+        Assert.That(_committer.Commits[0].Message, Is.EqualTo("Fix b"));
+        Assert.That(_committer.Commits[0].WorktreePath, Is.EqualTo(Worktree));
+        await WaitFor(() => _vm.Rows.All(row => row.Change?.Path != "b.cs"), "the list to refresh");
+        Assert.That(_vm.CommitMessage, Is.Empty);
+        Assert.That(_vm.CheckedCount, Is.Zero);
+        Assert.That(_vm.UnpushedCount, Is.EqualTo(1));
+        Assert.That(_vm.HasActionError, Is.False);
+    }
+
+    [Test]
+    public async Task AFailedCommitIsShownAndKeepsTheMessageAndSelection()
+    {
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+        _committer.CommitFailure = new InvalidOperationException("hook rejected the commit");
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => _vm.HasActionError, "the error to show");
+
+        Assert.That(_vm.ActionError, Is.EqualTo("hook rejected the commit"));
+        Assert.That(_vm.CommitMessage, Is.EqualTo("Fix a"));
+        Assert.That(_vm.CheckedCount, Is.EqualTo(1));
+        Assert.That(FileRow("a.cs").IsChecked, Is.True);
+        Assert.That(_vm.IsBusy, Is.False);
+        Assert.That(_vm.CommitCommand.CanExecute(null), Is.True);
+    }
+
+    [Test]
+    public async Task PushIsDisabledUntilThereIsSomethingToPush()
+    {
+        await LoadTwoFiles();
+        Assert.That(_vm.PushCommand.CanExecute(null), Is.False);
+
+        _committer.Unpushed = 2;
+        _clock.Advance(Interval);
+        await WaitFor(() => _vm.UnpushedCount == 2, "the unpushed count");
+
+        Assert.That(_vm.PushCommand.CanExecute(null), Is.True);
+    }
+
+    [Test]
+    public async Task PushSendsTheWorktreeAndThenHasNothingLeftToPush()
+    {
+        _committer.Unpushed = 1;
+        await LoadTwoFiles();
+        await WaitFor(() => _vm.PushCommand.CanExecute(null), "push to be enabled");
+
+        _vm.PushCommand.Execute(null);
+        await WaitFor(() => _vm.StatusMessage is not null, "the push to finish");
+
+        Assert.That(_committer.Pushes.Single(), Is.EqualTo(Worktree));
+        await WaitFor(() => _vm.UnpushedCount == 0, "the unpushed count to refresh");
+        Assert.That(_vm.PushCommand.CanExecute(null), Is.False);
+    }
+
+    [Test]
+    public async Task AFailedPushIsShownAndStaysPushable()
+    {
+        _committer.Unpushed = 1;
+        _committer.PushFailure = new InvalidOperationException("Push rejected");
+        await LoadTwoFiles();
+        await WaitFor(() => _vm.PushCommand.CanExecute(null), "push to be enabled");
+
+        _vm.PushCommand.Execute(null);
+        await WaitFor(() => _vm.HasActionError, "the error to show");
+
+        Assert.That(_vm.ActionError, Is.EqualTo("Push rejected"));
+        Assert.That(_vm.UnpushedCount, Is.EqualTo(1));
+        Assert.That(_vm.PushCommand.CanExecute(null), Is.True);
+    }
+
+    [Test]
+    public async Task CommitAndPushAreDisabledWhileAnActionRuns()
+    {
+        _committer.Unpushed = 1;
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _committer.Gate = gate;
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => _vm.IsBusy, "the commit to start");
+
+        Assert.That(_vm.BusyText, Is.Not.Empty);
+        Assert.That(_vm.CommitCommand.CanExecute(null), Is.False);
+        Assert.That(_vm.PushCommand.CanExecute(null), Is.False);
+
+        gate.SetResult(true);
+        await WaitFor(() => !_vm.IsBusy, "the commit to finish");
+    }
+
+    [Test]
+    public async Task TheSelectionSurvivesAPollAndIsDroppedWhenTheFileDisappears()
+    {
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        FileRow("b.cs").IsChecked = true;
+
+        _fake.Changes = Unstaged(Change("a.cs"), Change("b.cs", additions: 5));
+        _clock.Advance(Interval);
+        await WaitFor(() => _vm.Rows.Any(row => row.Change?.Additions == 5), "the changed list");
+        Assert.That(FileRow("a.cs").IsChecked, Is.True);
+        Assert.That(FileRow("b.cs").IsChecked, Is.True);
+
+        _fake.Changes = Unstaged(Change("a.cs"));
+        _clock.Advance(Interval);
+        await WaitFor(() => _vm.CheckedCount == 1, "b.cs to be dropped from the selection");
+    }
+
+    [Test]
+    public async Task TheAllBoxChecksAndUnchecksEveryFile()
+    {
+        await LoadTwoFiles();
+        Assert.That(_vm.AllChecked, Is.False);
+
+        _vm.AllChecked = true;
+
+        Assert.That(_vm.CheckedCount, Is.EqualTo(2));
+        Assert.That(_vm.Rows.Where(row => !row.IsHeader).All(row => row.IsChecked), Is.True);
+        Assert.That(_vm.AllChecked, Is.True);
+
+        _vm.AllChecked = false;
+
+        Assert.That(_vm.CheckedCount, Is.Zero);
+        Assert.That(_vm.Rows.Where(row => !row.IsHeader).Any(row => row.IsChecked), Is.False);
+    }
+
+    [Test]
+    public async Task TheAllBoxIsUndeterminedWhenOnlySomeFilesAreChecked()
+    {
+        await LoadTwoFiles();
+        var changed = new List<string?>();
+        _vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        FileRow("a.cs").IsChecked = true;
+
+        Assert.That(_vm.AllChecked, Is.Null);
+        Assert.That(changed, Does.Contain(nameof(GitChangesViewModel.AllChecked)));
+
+        FileRow("b.cs").IsChecked = true;
+
+        Assert.That(_vm.AllChecked, Is.True);
+    }
+
+    [Test]
+    public async Task AFileListedAsStagedAndChangedIsCheckedInBothRows()
+    {
+        _fake.Changes = Tree([Change("p.cs", staged: true)], [Change("p.cs")]);
+        Activate();
+        await WaitForLoaded();
+
+        var rows = _vm.Rows.Where(row => row.Change?.Path == "p.cs").ToList();
+        rows[0].IsChecked = true;
+
+        Assert.That(rows[1].IsChecked, Is.True);
+        Assert.That(_vm.CheckedCount, Is.EqualTo(1));
     }
 }

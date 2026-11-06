@@ -19,6 +19,8 @@ public sealed class KontextApp : App
 
     public IssueDetailPage IssueDetail => new(MainWindow);
 
+    public GitTabPage GitTab => new(MainWindow);
+
     protected override string ExecutablePath => BuiltExecutable;
 
     protected override AppLaunchOptions DefaultOptions => new() { ShowPointer = true };
