@@ -1,5 +1,6 @@
 using System.Globalization;
 using Kontext.Domain;
+using Kontext.Presentation;
 using Microsoft.UI.Xaml;
 
 namespace Kontext.Views;
@@ -11,7 +12,10 @@ public static class GitViewFormat
 
     public static Visibility VisibleWhenText(string? text) => string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
 
-    public static string PushLabel(int unpushed) => unpushed > 0 ? $"Push ({unpushed})" : "Push";
+    public static string CommitLabel(string? busyText) => busyText == GitChangesViewModel.CommittingText ? busyText : "Commit";
+
+    public static string PushLabel(int unpushed, string? busyText)
+        => busyText == GitChangesViewModel.PushingText ? busyText : unpushed > 0 ? $"Push ({unpushed})" : "Push";
 
     public static string Title(FileChange? change)
         => change is null

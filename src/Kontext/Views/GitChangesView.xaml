@@ -330,7 +330,7 @@
                         HorizontalAlignment="Stretch"
                         AutomationProperties.AutomationId="GitCommitButton"
                         Command="{x:Bind ViewModel.CommitCommand, Mode=OneWay}"
-                        Content="Commit"
+                        Content="{x:Bind views:GitViewFormat.CommitLabel(ViewModel.BusyText), Mode=OneWay}"
                         Style="{StaticResource AccentButtonStyle}">
                     </Button>
                     <Button
@@ -338,22 +338,8 @@
                         HorizontalAlignment="Stretch"
                         AutomationProperties.AutomationId="GitPushButton"
                         Command="{x:Bind ViewModel.PushCommand, Mode=OneWay}"
-                        Content="{x:Bind views:GitViewFormat.PushLabel(ViewModel.UnpushedCount), Mode=OneWay}" />
+                        Content="{x:Bind views:GitViewFormat.PushLabel(ViewModel.UnpushedCount, ViewModel.BusyText), Mode=OneWay}" />
                 </Grid>
-                <StackPanel
-                    Orientation="Horizontal"
-                    Spacing="8"
-                    Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}">
-                    <ProgressRing
-                        Width="16"
-                        Height="16"
-                        IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        AutomationProperties.AutomationId="GitBusyText"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Text="{x:Bind ViewModel.BusyText, Mode=OneWay}" />
-                </StackPanel>
             </StackPanel>
         </Grid>
 

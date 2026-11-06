@@ -13,6 +13,10 @@ namespace Kontext.Presentation;
 /// </summary>
 public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWorkspaceCommitter committer, TimeProvider clock, GitChangesOptions options) : ObservableObject, IDisposable
 {
+    public const string CommittingText = "Committing…";
+
+    public const string PushingText = "Pushing…";
+
     private readonly LatestOnly _reloads = new();
     private readonly LatestOnly _selections = new();
     private readonly CancellationTokenSource _lifetime = new();
@@ -378,7 +382,7 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         var noun = files == 1 ? "file" : "files";
 
         await RunActionAsync(
-            "Committing…",
+            CommittingText,
             (path, token) => committer.CommitAsync(path, selection, message, token),
             () =>
             {
@@ -392,7 +396,7 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
 
     [RelayCommand(CanExecute = nameof(CanPush))]
     private Task PushAsync()
-        => RunActionAsync("Pushing…", (path, token) => committer.PushAsync(path, token), () => "Pushed to origin.");
+        => RunActionAsync(PushingText, (path, token) => committer.PushAsync(path, token), () => "Pushed to origin.");
 
     // Git runs off the UI thread. A failure is shown and leaves the message and selection as they were, so the user can retry.
     private async Task RunActionAsync(string busyText, Func<string, CancellationToken, Task> action, Func<string> onSuccess)
