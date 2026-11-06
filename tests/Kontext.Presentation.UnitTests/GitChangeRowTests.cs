@@ -8,15 +8,20 @@ public class GitChangeRowTests
     private static GitChangeRow File(string path = "src/Views/Foo.cs", FileChangeStatus status = FileChangeStatus.Modified, int? additions = 12, int? deletions = 3)
         => new(path, new FileChange(path, null, status, IsStaged: false, additions, deletions, IsBinary: false));
 
-    [TestCase(FileChangeStatus.Modified, "M")]
-    [TestCase(FileChangeStatus.Added, "+")]
-    [TestCase(FileChangeStatus.Deleted, "D")]
-    [TestCase(FileChangeStatus.Renamed, "R")]
-    [TestCase(FileChangeStatus.Untracked, "+")]
-    [TestCase(FileChangeStatus.Conflicted, "!")]
-    public void ShowsTheStatusLetterForEachStatus(FileChangeStatus status, string letter)
+    [TestCase(FileChangeStatus.Added, "+", true, false, false)]
+    [TestCase(FileChangeStatus.Untracked, "+", true, false, false)]
+    [TestCase(FileChangeStatus.Modified, "●", false, true, false)]
+    [TestCase(FileChangeStatus.Renamed, "●", false, true, false)]
+    [TestCase(FileChangeStatus.Deleted, "−", false, false, true)]
+    [TestCase(FileChangeStatus.Conflicted, "!", false, false, true)]
+    public void ShowsAColouredGlyphForEachStatus(FileChangeStatus status, string glyph, bool added, bool changed, bool removed)
     {
-        Assert.That(File(status: status).StatusLetter, Is.EqualTo(letter));
+        var row = File(status: status);
+
+        Assert.That(row.StatusGlyph, Is.EqualTo(glyph));
+        Assert.That(row.IsAddedGlyph, Is.EqualTo(added));
+        Assert.That(row.IsChangedGlyph, Is.EqualTo(changed));
+        Assert.That(row.IsRemovedGlyph, Is.EqualTo(removed));
     }
 
     [Test]
@@ -54,7 +59,8 @@ public class GitChangeRowTests
 
         Assert.That(header.IsHeader, Is.True);
         Assert.That(header.Text, Is.EqualTo("Staged (1)"));
-        Assert.That(header.StatusLetter, Is.Empty);
+        Assert.That(header.StatusGlyph, Is.Empty);
+        Assert.That(header.IsAddedGlyph || header.IsChangedGlyph || header.IsRemovedGlyph, Is.False);
         Assert.That(header.HasCounts, Is.False);
         Assert.That(File().IsHeader, Is.False);
     }

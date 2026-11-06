@@ -102,12 +102,26 @@
                     AutomationProperties.AutomationId="GitFileCheck"
                     AutomationProperties.Name="{x:Bind Text}"
                     IsChecked="{x:Bind IsChecked, Mode=TwoWay}" />
-                <TextBlock
-                    Grid.Column="1"
-                    VerticalAlignment="Center"
-                    FontFamily="Consolas"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Text="{x:Bind StatusLetter}" />
+                <Grid Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontWeight="Bold"
+                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                        Text="{x:Bind StatusGlyph}"
+                        Visibility="{x:Bind IsAddedGlyph}" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontWeight="Bold"
+                        Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                        Text="{x:Bind StatusGlyph}"
+                        Visibility="{x:Bind IsChangedGlyph}" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontWeight="Bold"
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Text="{x:Bind StatusGlyph}"
+                        Visibility="{x:Bind IsRemovedGlyph}" />
+                </Grid>
                 <TextBlock
                     Grid.Column="2"
                     VerticalAlignment="Center"
