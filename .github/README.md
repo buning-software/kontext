@@ -35,6 +35,7 @@
         <li><a href="#requirements">Requirements</a></li>
         <li><a href="#build-and-run">Build and run</a></li>
         <li><a href="#test">Test</a></li>
+        <li><a href="#install-a-release">Install a release</a></li>
         <li><a href="#release">Release</a></li>
       </ul>
     </li>
@@ -116,16 +117,29 @@ To run only the unit tests:
 Get-ChildItem tests -Recurse -Filter *.UnitTests.csproj | ForEach-Object { dotnet test $_.FullName -c Release }
 ```
 
+### Install a release
+
+Each [release](https://github.com/buning-software/kontext/releases) has a signed MSIX and `Kontext.cer`, the certificate it is signed with. Windows only installs the package once you trust that certificate.
+
+1.  Trust the certificate once, from an elevated PowerShell:
+
+    ```powershell
+    Import-Certificate -FilePath .\Kontext.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+    ```
+
+2.  Open the `.msix` and choose **Install**.
+
+Kontext still keeps its data under `%LOCALAPPDATA%\Kontext`: the package turns off file redirection so your clones and worktrees stay visible to Explorer, terminals and IDEs.
+
 ### Release
 
 Publishing a GitHub release tagged like `v1.2.3` runs the tests, then builds a signed, self-contained x64 MSIX and attaches it to the release together with `Kontext.cer`, the public certificate. The tag sets the package version. The workflow imports the certificate into the runner's certificate store and signs by thumbprint, which avoids the APPX0105 and APPX0107 warnings that come from pointing MSBuild at the `.pfx`. The signature is timestamped (DigiCert), so the package keeps verifying after the certificate expires. ARM64 is not built because the embedded terminal control only ships x64 binaries.
 
 One-time setup:
 
-* Signing uses the `CERTIFICATE_BASE64` (the `.pfx`, base64 encoded) and `CERTIFICATE_PASSWORD` secrets. They are organization secrets of `buning-software`, shared with the other Buning Software apps, and this repository has to be allowed to use them (organization Settings, Secrets and variables, Actions). The certificate subject must equal `Publisher` in `src/Kontext/Package.appxmanifest` (`CN=BuningSoftware`). To create a new certificate, for example when it expires, use `generate_certificate.ps1` in the [Surveil repository](https://github.com/buning-software/surveil), update both organization secrets, and never commit the `.pfx`.
+* Signing uses the `CERTIFICATE_BASE64` (the `.pfx`, base64 encoded) and `CERTIFICATE_PASSWORD` secrets. They are organization secrets of `buning-software`, and this repository has to be allowed to use them (organization Settings, Secrets and variables, Actions). The certificate subject must equal `Publisher` in `src/Kontext/Package.appxmanifest` (`CN=BuningSoftware`). To create a new certificate, for example when it expires, generate a self-signed code-signing certificate with that subject, update both organization secrets, and never commit the `.pfx`.
 * Set the repository variable `KONTEXT_GITHUB_CLIENT_ID`. An installed MSIX is read-only, so the client id has to be built in; the release fails without it.
 
-To install a release, first trust `Kontext.cer` once (open it, choose Install Certificate, Local Machine, Trusted People), then open the `.msix`. Kontext still keeps its data under `%LOCALAPPDATA%\Kontext`: the package turns off file redirection so your clones and worktrees stay visible to Explorer, terminals and IDEs.
 
 <!-- CONTRIBUTING -->
 ## Contributing
