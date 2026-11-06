@@ -39,16 +39,22 @@ public sealed record GitChangeRow(string Text, FileChange? Change) : INotifyProp
     /// <summary>Told when the user checks or unchecks the row.</summary>
     public Action<GitChangeRow, bool>? Toggled { get; init; }
 
-    public string StatusLetter => Change?.Status switch
+    public string StatusGlyph => Change?.Status switch
     {
-        FileChangeStatus.Modified => "M",
         // A new file is "+", staged or not.
         FileChangeStatus.Added or FileChangeStatus.Untracked => "+",
-        FileChangeStatus.Deleted => "D",
-        FileChangeStatus.Renamed => "R",
+        FileChangeStatus.Modified or FileChangeStatus.Renamed => "●",
+        FileChangeStatus.Deleted => "−",
         FileChangeStatus.Conflicted => "!",
         _ => string.Empty,
     };
+
+    public bool IsAddedGlyph => Change?.Status is FileChangeStatus.Added or FileChangeStatus.Untracked;
+
+    public bool IsChangedGlyph => Change?.Status is FileChangeStatus.Modified or FileChangeStatus.Renamed;
+
+    /// <summary>Drawn in the critical colour: deleted files, and conflicted ones since they need attention.</summary>
+    public bool IsRemovedGlyph => Change?.Status is FileChangeStatus.Deleted or FileChangeStatus.Conflicted;
 
     public string FileName => Change is null ? string.Empty : Change.Path[(Change.Path.LastIndexOf('/') + 1)..];
 

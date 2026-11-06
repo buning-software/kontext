@@ -373,8 +373,33 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _collapsedRepositories.Save(_collapsed);
     }
 
+    private void ForgetClearedWorkspaces(IReadOnlyList<ExistingWorkspace> workspaces)
+    {
+        var existing = workspaces.Select(workspace => workspace.Issue).ToHashSet();
+
+        foreach (var item in _all.ToList())
+        {
+            if (existing.Contains(item.Key))
+            {
+                continue;
+            }
+
+            var state = _tracker.StateOf(item.Key);
+            if (state.Status is IssueWorkStatus.Ready or IssueWorkStatus.Done && state.WorktreePath is not null)
+            {
+                _tracker.Report(item.Key, IssueWorkState.NotStarted);
+            }
+            else if (state.Status == IssueWorkStatus.NotStarted)
+            {
+                item.HasSavedSession = false;
+            }
+        }
+    }
+
     private void MarkExistingWorkspaces(IReadOnlyList<ExistingWorkspace> workspaces)
     {
+        ForgetClearedWorkspaces(workspaces);
+
         foreach (var workspace in workspaces)
         {
             if (!_itemsByKey.TryGetValue(workspace.Issue, out var item))

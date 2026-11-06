@@ -12,6 +12,7 @@ public class IssueSidebarAutoRefreshTests
     private FakeTimeProvider _clock = null!;
     private InMemoryIssueWorkTracker _tracker = null!;
     private FakeGitHubService _gitHub = null!;
+    private FakeExistingWorkspaceFinder _workspaces = null!;
     private IssueSidebarViewModel? _sidebar;
 
     [SetUp]
@@ -20,6 +21,7 @@ public class IssueSidebarAutoRefreshTests
         _clock = new FakeTimeProvider();
         _tracker = new InMemoryIssueWorkTracker();
         _gitHub = new FakeGitHubService { Issues = [Issues.Create(4, "Add notifications", "acme/memento")] };
+        _workspaces = new FakeExistingWorkspaceFinder();
     }
 
     [TearDown]
@@ -29,7 +31,7 @@ public class IssueSidebarAutoRefreshTests
         _sidebar = new(
             _gitHub,
             _tracker,
-            new FakeExistingWorkspaceFinder(),
+            _workspaces,
             new WorkspaceIssues(_gitHub),
             new InMemoryHiddenRepositoryStore(),
             new InMemoryCollapsedRepositoryStore(),
@@ -95,6 +97,21 @@ public class IssueSidebarAutoRefreshTests
         await Task.Delay(100);
 
         Assert.That(IssueCount(sidebar), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task NoticesWhenASessionIsClearedElsewhere()
+    {
+        var issue = _gitHub.Issues[0];
+        _workspaces.Found.Add(new ExistingWorkspace(issue.Repository, issue.Number, new WorktreeInfo(@"C:\wt\4", "kontext/4-add", "abc", IsMain: false)));
+        var sidebar = CreateSidebar(Interval);
+        await sidebar.RefreshCommand.ExecuteAsync(null);
+        Assert.That(_tracker.StateOf(issue.Key).Status, Is.EqualTo(IssueWorkStatus.Ready));
+
+        _workspaces.Found.Clear();
+        _clock.Advance(Interval);
+
+        await AsyncAssert.EventuallyAsync(() => _tracker.StateOf(issue.Key).Status == IssueWorkStatus.NotStarted, "the cleared session to be noticed");
     }
 
     [Test]
