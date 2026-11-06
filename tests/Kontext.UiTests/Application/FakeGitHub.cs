@@ -10,6 +10,9 @@ public static class FakeGitHub
     public const string Memento = "acme/memento";
 
     public const string CreatingGalleries = "Creating Galleries";
+    /// <summary>The one fake issue that has a worktree, so its git tab is available.</summary>
+    public const string DrawTheCoastline = "Draw the coastline";
+
     public const string AddNotifications = "Add notifications";
     public const string BringUnderUiTest = "Bring project under UI test";
 

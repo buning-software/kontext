@@ -61,6 +61,7 @@ public class CompositionTests
         typeof(IClaudeLauncher),
         typeof(IWorkspaceOpener),
         typeof(IWorkspaceChanges),
+        typeof(IWorkspaceCommitter),
         typeof(ClaudeEnvironmentScrubber),
         typeof(TerminalZoom),
     ];

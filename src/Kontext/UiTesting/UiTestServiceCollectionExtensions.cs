@@ -16,6 +16,11 @@ internal static class UiTestServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<IGitHubTokenStore, UiTestTokenStore>());
         services.Replace(ServiceDescriptor.Singleton<IGitHubService, UiTestGitHubService>());
         services.Replace(ServiceDescriptor.Singleton<IIssueSessionCoordinator, UiTestSessionCoordinator>());
+
+        // One instance serves both contracts, so a commit is seen by the next change listing.
+        var workspace = new UiTestWorkspace();
+        services.Replace(ServiceDescriptor.Singleton<IWorkspaceChanges>(workspace));
+        services.Replace(ServiceDescriptor.Singleton<IWorkspaceCommitter>(workspace));
         return services;
     }
 }

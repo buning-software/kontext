@@ -56,6 +56,7 @@ Kontext lets you work on all your repositories' issues at once and leave Claude 
 * **Know when Claude needs you.** Claude Code hooks report whether a session is working or waiting for input; the circle in the sidebar changes accordingly.
 * **Resume where you left off.** Sessions are remembered per issue and continued with `claude --resume` after a restart.
 * **Open it anywhere.** Open a worktree in File Explorer, Windows Terminal or its solution file (`.slnx` or `.sln`, in whatever app is registered for it) from the issue's header.
+* **Commit and push from the app.** The git tab lists the worktree's changes with a checkbox per file; commit the selected files with a message and push the branch to `origin` without leaving Kontext.
 * **Clean up when done.** For a closed issue, Clear session removes the worktree and its branch.
 * **Modern Architecture:** Built with SOLID principles and design patterns for maximum maintainability: a modular monolith with compiler-enforced module boundaries.
 * **Native Windows look.** WinUI 3 with Mica, light and dark themes, and a terminal with zoom and mouse support.

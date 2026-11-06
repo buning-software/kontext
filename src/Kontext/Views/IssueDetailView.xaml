@@ -186,6 +186,7 @@
                 <SelectorBarItem x:Name="IssueTab" Text="issue" />
                 <SelectorBarItem
                     x:Name="GitTab"
+                    AutomationProperties.AutomationId="GitTab"
                     Text="git"
                     Visibility="{x:Bind ViewModel.HasWorkspace, Mode=OneWay}" />
             </SelectorBar>

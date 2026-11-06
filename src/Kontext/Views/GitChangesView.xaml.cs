@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using Kontext.Domain;
 using Kontext.Presentation;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
@@ -19,12 +20,30 @@ public sealed partial class GitChangesView : UserControl
 
     private bool _syncing;
 
-    public GitChangesView() => InitializeComponent();
+    public GitChangesView()
+    {
+        InitializeComponent();
+        Loaded += (_, _) => ApplyDisabledCommitColors();
+        ActualThemeChanged += (_, _) => ApplyDisabledCommitColors();
+    }
 
     public GitChangesViewModel? ViewModel
     {
         get => (GitChangesViewModel?)GetValue(ViewModelProperty);
         set => SetValue(ViewModelProperty, value);
+    }
+
+    // The disabled Commit button is the accent colour washed out towards grey, not plain grey and not a faded blue.
+    private void ApplyDisabledCommitColors()
+    {
+        var accent = new Windows.UI.ViewManagement.UISettings().GetColorValue(Windows.UI.ViewManagement.UIColorType.Accent);
+        var grey = ActualTheme == ElementTheme.Dark ? (byte)0x5A : (byte)0xB4;
+        byte Mix(byte channel) => (byte)((channel * 0.45) + (grey * 0.55));
+        var washedOut = Windows.UI.Color.FromArgb(0xFF, Mix(accent.R), Mix(accent.G), Mix(accent.B));
+
+        CommitButton.Resources["AccentButtonBackgroundDisabled"] = new SolidColorBrush(washedOut);
+        CommitButton.Resources["AccentButtonBorderBrushDisabled"] = new SolidColorBrush(washedOut);
+        CommitButton.Resources["AccentButtonForegroundDisabled"] = new SolidColorBrush(Colors.White) { Opacity = 0.75 };
     }
 
     private void OnViewModelChanged(GitChangesViewModel? oldValue, GitChangesViewModel? newValue)
