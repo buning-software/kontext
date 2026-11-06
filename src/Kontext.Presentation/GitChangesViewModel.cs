@@ -89,7 +89,9 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         }
         set
         {
-            if (IsBusy)
+            // The view writes the value it just read back (undetermined while only some files are checked); that is not a
+            // request to change the selection. Only the user checking or unchecking the box is.
+            if (IsBusy || value is null || value == AllChecked)
             {
                 return;
             }

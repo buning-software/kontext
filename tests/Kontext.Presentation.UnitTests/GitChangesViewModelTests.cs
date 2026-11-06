@@ -653,6 +653,18 @@ public class GitChangesViewModelTests
     }
 
     [Test]
+    public async Task TheViewWritingTheUndeterminedStateBackKeepsTheSelection()
+    {
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+
+        _vm.AllChecked = null;
+
+        Assert.That(_vm.CheckedCount, Is.EqualTo(1));
+        Assert.That(FileRow("a.cs").IsChecked, Is.True);
+    }
+
+    [Test]
     public async Task AFileListedAsStagedAndChangedIsCheckedInBothRows()
     {
         _fake.Changes = Tree([Change("p.cs", staged: true)], [Change("p.cs")]);
