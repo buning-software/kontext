@@ -253,7 +253,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
+                <RowDefinition Height="*" MinHeight="96" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
@@ -304,15 +304,15 @@
                     IsOpen="{x:Bind ViewModel.HasActionError, Mode=OneWay}"
                     Message="{x:Bind ViewModel.ActionError, Mode=OneWay}"
                     Severity="Error" />
-                <InfoBar
+                <TextBlock
                     AutomationProperties.AutomationId="GitStatusMessage"
-                    AutomationProperties.Name="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                    IsClosable="False"
-                    IsOpen="{x:Bind ViewModel.HasStatusMessage, Mode=OneWay}"
-                    Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                    Severity="Success" />
+                    Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind views:GitViewFormat.VisibleWhenText(ViewModel.StatusMessage), Mode=OneWay}" />
                 <TextBox
-                    MinHeight="72"
+                    MinHeight="56"
                     AcceptsReturn="True"
                     AutomationProperties.AutomationId="GitCommitMessage"
                     AutomationProperties.Name="Commit message"
