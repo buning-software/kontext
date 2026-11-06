@@ -1,4 +1,5 @@
 using Kontext.UiTests.Application;
+using WinUia;
 
 namespace Kontext.UiTests.Tests;
 
@@ -24,4 +25,7 @@ public abstract class KontextFixture
         App.Dispose();
         Data.Dispose();
     }
+
+    protected static void Eventually(Func<bool> condition, string because = "", TimeSpan? timeout = null) =>
+        Assert.That(Poll.Until(condition, timeout), Is.True, because);
 }

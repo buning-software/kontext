@@ -14,8 +14,6 @@
   <ItemGroup>
     <!-- Lets the tests find the exe they drive; KONTEXT_EXE overrides it. -->
     <AssemblyMetadata Include="KontextBinDirectory" Value="$(KontextBinDirectory)" />
-    <!-- Every test is a UI test: serialised on the desktop and tagged Category=UI. -->
-    <AssemblyAttribute Include="WinUia.NUnit.UiTestAttribute" />
     <!-- UI Automation requires MTA. -->
     <AssemblyAttribute Include="NUnit.Framework.ApartmentAttribute">
       <_Parameter1>System.Threading.ApartmentState.MTA</_Parameter1>
@@ -39,7 +37,6 @@
     </PackageReference>
     <PackageReference Include="NUnit3TestAdapter" />
     <PackageReference Include="WinUia" />
-    <PackageReference Include="WinUia.NUnit" />
   </ItemGroup>
 
   <ItemGroup>
