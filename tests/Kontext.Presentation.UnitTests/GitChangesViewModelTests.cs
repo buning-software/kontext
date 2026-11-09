@@ -571,7 +571,7 @@ public class GitChangesViewModelTests
         await WaitFor(() => _vm.PushCommand.CanExecute(null), "push to be enabled");
 
         _vm.PushCommand.Execute(null);
-        await WaitFor(() => _vm.HasActionError, "the error to show");
+        await WaitFor(() => _vm.HasActionError && _vm.PushCommand.CanExecute(null), "the error to show and the push to finish");
 
         Assert.That(_vm.ActionError, Is.EqualTo("Push rejected"));
         Assert.That(_vm.UnpushedCount, Is.EqualTo(1));
