@@ -49,7 +49,7 @@
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
       <Extensions>
-        <desktop:Extension Category="windows.startupTask" Executable="$targetnametoken$.exe" EntryPoint="Windows.FullTrustApplication">
+        <desktop:Extension Category="windows.startupTask" Executable="Kontext.exe" EntryPoint="Windows.FullTrustApplication">
           <desktop:StartupTask TaskId="KontextStartup" Enabled="false" DisplayName="Kontext" />
         </desktop:Extension>
       </Extensions>
