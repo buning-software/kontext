@@ -14,9 +14,14 @@ public abstract class KontextFixture
     public void LaunchApp()
     {
         Data = new TestDataDirectory();
+        BeforeLaunch();
         App = KontextApp.Launch(Data);
 
         Eventually(() => App.Sidebar.IssueCount == FakeGitHub.AllIssuesCount, "the fake issues load on start-up", TimeSpan.FromSeconds(20));
+    }
+
+    protected virtual void BeforeLaunch()
+    {
     }
 
     [TearDown]

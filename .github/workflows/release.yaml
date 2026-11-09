@@ -106,6 +106,7 @@ jobs:
             -c Release `
             -r ${{ matrix.rid }} `
             -p:Platform=${{ matrix.platform }} `
+            -p:Version=${{ steps.version.outputs.DISPLAY_VERSION }} `
             -p:WindowsPackageType=MSIX `
             -p:GenerateAppxPackageOnBuild=true `
             -p:AppxPackageDir="${{ github.workspace }}\AppxPackages\" `

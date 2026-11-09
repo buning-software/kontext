@@ -1,5 +1,5 @@
 using Kontext.Domain;
-using Kontext.TestSupport;
+using Kontext.Testing;
 using Microsoft.Extensions.Time.Testing;
 
 namespace Kontext.Presentation.UnitTests;
@@ -31,7 +31,7 @@ public class WorkspaceViewModelTests
             Issues = [Issues.Create(4, "Add notifications", "acme/memento"), Issues.Create(3, "Bring project under UI test", "acme/memento")],
         };
 
-        _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), _clock);
+        _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), new FakeTranscripts(), _clock);
         _registry = new InMemoryIssueSessionRegistry();
         _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), _registry, _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), _clock, GitChangesOptions.Default));
         _workspace = new WorkspaceViewModel(_sidebar, _detail, _autoStart);

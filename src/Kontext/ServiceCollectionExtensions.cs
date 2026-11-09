@@ -7,6 +7,7 @@ using Kontext.Kernel;
 using Kontext.Presentation;
 using Kontext.Services;
 using Kontext.Sessions;
+using Kontext.Startup;
 using Kontext.Terminal;
 using Kontext.TerminalHost;
 using Kontext.Tray;
@@ -47,6 +48,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConfirmation, ContentDialogConfirmation>();
         services.AddSingleton<IGitHubTokenStore, CredentialLockerTokenStore>();
         services.AddSingleton<IEnterpriseServerPrompt, ContentDialogEnterprisePrompt>();
+        if (PackageIdentity.IsPackaged)
+        {
+            services.AddSingleton<IStartupRegistration, MsixStartupRegistration>();
+        }
+        else
+        {
+            services.AddSingleton<IStartupRegistration>(new RunKeyStartupRegistration(RunKeyValueName()));
+        }
 
         services.AddSingleton<IUiDispatcher>(_ => new DispatcherQueueDispatcher(DispatcherQueue.GetForCurrentThread()));
 
@@ -69,6 +78,11 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    private static string RunKeyValueName() =>
+        UiTestServiceCollectionExtensions.IsEnabled && Environment.GetEnvironmentVariable("KONTEXT_STARTUP_VALUE_NAME") is { Length: > 0 } name
+            ? name
+            : "Kontext";
 
     private static TimeSpan RefreshInterval(IConfiguration configuration) =>
         int.TryParse(configuration["Refresh:IntervalSeconds"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var seconds) && seconds >= 0

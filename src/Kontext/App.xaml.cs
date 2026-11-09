@@ -3,6 +3,7 @@ using Kontext.Tray;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
 namespace Kontext;
@@ -29,8 +30,21 @@ public partial class App : Application
         var window = _host.Services.GetRequiredService<MainWindow>();
 
         window.Closed += (_, _) => _host.Dispose();
-        window.Activate();
 
-        _host.Services.GetRequiredService<TrayHost>().Start();
+        var tray = _host.Services.GetRequiredService<TrayHost>();
+        tray.Start();
+
+        if (Program.StartedAtSignIn)
+        {
+            window.AppWindow.Show(activateWindow: false);
+            window.AppWindow.Hide();
+        }
+        else
+        {
+            window.Activate();
+        }
+
+        var dispatcher = DispatcherQueue.GetForCurrentThread();
+        Program.HandleSecondInstance(() => dispatcher.TryEnqueue(tray.Restore));
     }
 }

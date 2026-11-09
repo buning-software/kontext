@@ -2,15 +2,6 @@ using Kontext.Domain;
 
 namespace Kontext.Presentation;
 
-/// <summary>One side of a split diff row. <paramref name="Kind"/> is Context, Removed (left) or Added (right).</summary>
-public sealed record SplitCell(DiffLineKind Kind, int? Number, string Text);
-
-/// <summary>
-/// One row of a split diff: the old text on the left, the new text on the right. A hunk header or note has no
-/// sides and instead spans the whole row through <paramref name="Spanning"/>.
-/// </summary>
-public sealed record SplitDiffRow(SplitCell? Left, SplitCell? Right, DiffLine? Spanning = null);
-
 public static class SplitDiffRows
 {
     /// <summary>Lays a unified diff out side by side. A run of removed lines is paired, in order, with the added lines that follow it.</summary>

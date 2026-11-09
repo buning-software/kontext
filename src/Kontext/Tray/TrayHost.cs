@@ -39,7 +39,7 @@ internal sealed class TrayHost(MainWindow window, NotifyIcon icon, TrayContextMe
         }
     }
 
-    private void Restore()
+    public void Restore()
     {
         if (window.AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter)
         {
