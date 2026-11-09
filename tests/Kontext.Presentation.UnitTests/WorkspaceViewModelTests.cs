@@ -17,6 +17,8 @@ public class WorkspaceViewModelTests
     private IssueDetailViewModel _detail = null!;
     private WorkspaceViewModel _workspace = null!;
     private InMemoryIssueSessionRegistry _registry = null!;
+    private FakeGeneralSessionCoordinator _generalCoordinator = null!;
+    private GeneralSessionViewModel _general = null!;
 
     [SetUp]
     public async Task CreateWorkspace()
@@ -34,7 +36,9 @@ public class WorkspaceViewModelTests
         _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), new FakeTranscripts(), _clock);
         _registry = new InMemoryIssueSessionRegistry();
         _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), _registry, _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), _clock, GitChangesOptions.Default));
-        _workspace = new WorkspaceViewModel(_sidebar, _detail, _autoStart);
+        _generalCoordinator = new FakeGeneralSessionCoordinator();
+        _general = new GeneralSessionViewModel(_generalCoordinator);
+        _workspace = new WorkspaceViewModel(_sidebar, _detail, _general, _autoStart);
 
         await _sidebar.RefreshCommand.ExecuteAsync(null);
     }
@@ -43,6 +47,7 @@ public class WorkspaceViewModelTests
     public void Dispose()
     {
         _detail.Dispose();
+        _general.Dispose();
         _sidebar.Dispose();
         _autoStart.Dispose();
     }
@@ -214,6 +219,101 @@ public class WorkspaceViewModelTests
         _sidebar.SelectedItem = null;
 
         Assert.That(_workspace.IsSettingsOpen, Is.True);
+    }
+
+    [Test]
+    public void ListsTheGeneralClaudeEntryFirstAboveTheRepositoryGroups()
+    {
+        Assert.That(_workspace.MenuItems[0], Is.InstanceOf<SidebarSeparator>());
+        Assert.That(_workspace.MenuItems[1], Is.SameAs(_general));
+        Assert.That(_workspace.MenuItems[2], Is.InstanceOf<SidebarSeparator>());
+        Assert.That(_workspace.MenuItems.Skip(3), Is.EqualTo(_sidebar.MenuGroups));
+    }
+
+    [Test]
+    public void KeepsTheGeneralClaudeEntryWhenTheSidebarIsCleared()
+    {
+        _sidebar.Clear();
+
+        Assert.That(_workspace.MenuItems, Has.Count.EqualTo(3));
+        Assert.That(_workspace.MenuItems[1], Is.SameAs(_general));
+    }
+
+    [Test]
+    public void OpeningTheGeneralPageStartsASessionAndHidesTheIssueDetail()
+    {
+        _sidebar.SelectedItem = ItemNumbered(4);
+
+        _workspace.OpenGeneral();
+
+        Assert.That(_workspace.IsGeneralOpen, Is.True);
+        Assert.That(_workspace.IsDetailVisible, Is.False);
+        Assert.That(_detail.IsCovered, Is.True);
+        Assert.That(_general.IsCovered, Is.False);
+        Assert.That(_generalCoordinator.Starts, Is.EqualTo(1));
+        Assert.That(_general.VisibleSession, Is.Not.Null);
+    }
+
+    [Test]
+    public void ReturningToTheGeneralPageKeepsTheSameSession()
+    {
+        _workspace.OpenGeneral();
+        var session = _general.VisibleSession;
+
+        _sidebar.SelectedItem = ItemNumbered(4);
+        Assert.That(_general.VisibleSession, Is.Null, "the native terminal is hidden while an issue covers it");
+        _workspace.OpenGeneral();
+
+        Assert.That(_general.VisibleSession, Is.SameAs(session));
+        Assert.That(_generalCoordinator.Starts, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void OpeningTheSettingsHidesTheGeneralTerminalAndShowsItAgainAfterwards()
+    {
+        _workspace.OpenGeneral();
+        var session = _general.VisibleSession;
+
+        _workspace.IsSettingsOpen = true;
+
+        Assert.That(_general.VisibleSession, Is.Null);
+        Assert.That(_workspace.IsGeneralOpen, Is.False);
+
+        _workspace.OpenGeneral();
+
+        Assert.That(_general.VisibleSession, Is.SameAs(session));
+    }
+
+    [Test]
+    public void SelectingAnIssueWhileTheGeneralPageIsOpenShowsTheIssue()
+    {
+        _workspace.OpenGeneral();
+
+        _sidebar.SelectedItem = ItemNumbered(4);
+
+        Assert.That(_workspace.CurrentPage, Is.EqualTo(WorkspacePage.Issue));
+        Assert.That(_detail.IsCovered, Is.False);
+    }
+
+    [Test]
+    public void TheIssueDetailAndSignInFormAreNotShownWhileTheGeneralPageIsOpen()
+    {
+        _workspace.OpenGeneral();
+        Assert.That(_workspace.IsDetailVisible, Is.False, "the sign-in form shown with the issue detail must not cover the Claude terminal");
+
+        _workspace.OpenIssue();
+
+        Assert.That(_workspace.IsDetailVisible, Is.True);
+    }
+
+    [Test]
+    public void ClosingTheSettingsWhileTheGeneralPageIsOpenKeepsTheGeneralPage()
+    {
+        _workspace.OpenGeneral();
+
+        _workspace.IsSettingsOpen = false;
+
+        Assert.That(_workspace.IsGeneralOpen, Is.True);
     }
 
     [Test]

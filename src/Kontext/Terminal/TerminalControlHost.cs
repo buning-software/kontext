@@ -10,7 +10,9 @@ public sealed class TerminalControlHost
 {
     private Panel? _panel;
 
-    public void Attach(Panel panel) => _panel = panel;
+    // Every surface (the issue pane and the general Claude pane) offers its panel. New controls start in any of them, collapsed,
+    // and are moved into the panel of the surface that shows them, so the native terminal always sits where that surface is laid out.
+    public void Attach(Panel panel) => _panel ??= panel;
 
     public void Add(EasyTerminalControl control)
     {
@@ -21,20 +23,23 @@ public sealed class TerminalControlHost
         panel.Children.Add(control);
     }
 
-    public void Remove(EasyTerminalControl control)
+    public static void Remove(EasyTerminalControl control)
     {
         control.Visibility = Visibility.Collapsed;
-        _panel?.Children.Remove(control);
+        (control.Parent as Panel)?.Children.Remove(control);
     }
 
-    public void Show(EasyTerminalControl? control)
+    public static void Show(EasyTerminalControl? control, Panel surface)
     {
-        if (_panel is null)
+        ArgumentNullException.ThrowIfNull(surface);
+
+        if (control is not null && !ReferenceEquals(control.Parent, surface))
         {
-            return;
+            (control.Parent as Panel)?.Children.Remove(control);
+            surface.Children.Add(control);
         }
 
-        foreach (var child in _panel.Children.Where(child => !ReferenceEquals(child, control)))
+        foreach (var child in surface.Children.Where(child => !ReferenceEquals(child, control)))
         {
             child.Visibility = Visibility.Collapsed;
         }

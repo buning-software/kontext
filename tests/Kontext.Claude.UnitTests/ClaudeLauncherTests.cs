@@ -135,6 +135,27 @@ public class ClaudeLauncherTests
     }
 
     [Test]
+    public void StartsAGeneralSessionInTheFolderWithoutHooksOrAnEarlierSession()
+    {
+        var launch = _launcher.PrepareGeneral(@"C:\Users\me");
+
+        Assert.That(launch.Options.WorkingDirectory, Is.EqualTo(@"C:\Users\me"));
+        Assert.That(launch.Options.Arguments, Is.EqualTo(Expect.Seq("--session-id", launch.SessionId.Value.ToString("D"), "--permission-mode", "acceptEdits")));
+        Assert.That(launch.ReportsItself, Is.False);
+        Assert.That(launch.Resumed, Is.False);
+        Assert.That(_hooks.Asked, Is.Empty, "no hook events are sent for it");
+    }
+
+    [Test]
+    public void StartsEveryGeneralSessionWithANewId()
+    {
+        var first = _launcher.PrepareGeneral(@"C:\Users\me");
+        var second = _launcher.PrepareGeneral(@"C:\Users\me");
+
+        Assert.That(first.SessionId, Is.Not.EqualTo(second.SessionId));
+    }
+
+    [Test]
     public void RefusesANullWorktree()
     {
         Assert.That(() => _launcher.Prepare(null, null!), Throws.ArgumentNullException);

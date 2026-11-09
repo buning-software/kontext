@@ -108,20 +108,20 @@ internal sealed class EasyTerminalSessionService(TerminalControlHost host, Termi
         return process is null ? null : ProcessExit.WaitForExitCode(process);
     }
 
-    private void Abandon(EasyTerminalControl control)
+    private static void Abandon(EasyTerminalControl control)
     {
         if (control.ConPTYTerm is { } pty)
         {
             Release(pty);
         }
 
-        host.Remove(control);
+        TerminalControlHost.Remove(control);
     }
 
-    private void Discard(EasyTerminalSession session)
+    private static void Discard(EasyTerminalSession session)
     {
         Release(session.Pty);
-        host.Remove(session.Control);
+        TerminalControlHost.Remove(session.Control);
     }
 
     private static void Release(TermPTY pty)

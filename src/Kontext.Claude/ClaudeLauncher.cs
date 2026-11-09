@@ -30,6 +30,13 @@ internal sealed class ClaudeLauncher(ClaudeLaunchBuilder launch, IClaudeTranscri
         return new ClaudeLaunch(id, options, ReportsItself: settings is not null, Resumed: resumable is not null);
     }
 
+    public ClaudeLaunch PrepareGeneral(string workingDirectory)
+    {
+        var id = TerminalSessionId.New();
+
+        return new ClaudeLaunch(id, launch.BuildNew(id, workingDirectory), ReportsItself: false, Resumed: false);
+    }
+
     private static bool SameFolder(string first, string second)
         => string.Equals(
             Path.TrimEndingDirectorySeparator(Path.GetFullPath(first)),
