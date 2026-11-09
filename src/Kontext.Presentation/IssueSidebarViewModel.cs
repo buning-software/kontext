@@ -16,6 +16,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     private readonly IHiddenRepositoryStore _hiddenRepositories;
     private readonly ICollapsedRepositoryStore _collapsedRepositories;
     private readonly ISessionStore _sessions;
+    private readonly IClaudeTranscripts _transcripts;
     private readonly TimeProvider _clock;
     private readonly RefreshOptions _refreshOptions;
     private readonly HashSet<string> _hidden;
@@ -38,6 +39,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         IHiddenRepositoryStore hiddenRepositories,
         ICollapsedRepositoryStore collapsedRepositories,
         ISessionStore sessions,
+        IClaudeTranscripts transcripts,
         TimeProvider clock,
         RefreshOptions? refreshOptions = null)
     {
@@ -48,6 +50,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _hiddenRepositories = hiddenRepositories;
         _collapsedRepositories = collapsedRepositories;
         _sessions = sessions;
+        _transcripts = transcripts;
         _clock = clock;
         _refreshOptions = refreshOptions ?? new RefreshOptions(TimeSpan.Zero);
         _hidden = new HashSet<string>(hiddenRepositories.Load(), StringComparer.OrdinalIgnoreCase);
@@ -407,7 +410,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
                 continue;
             }
 
-            item.HasSavedSession = _sessions.Find(workspace.Issue) is not null;
+            item.HasSavedSession = _sessions.Find(workspace.Issue) is { } saved && _transcripts.Exists(saved.SessionId);
 
             var status = _tracker.StateOf(workspace.Issue).Status;
             var closed = item.Issue.IsClosed;

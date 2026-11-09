@@ -143,6 +143,45 @@
                         Margin="1,0,0,4"
                         AutomationProperties.HeadingLevel="Level2"
                         Style="{StaticResource BodyStrongTextBlockStyle}"
+                        Text="General" />
+
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid VerticalAlignment="Center" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <FontIcon
+                                AutomationProperties.AccessibilityView="Raw"
+                                FontSize="20"
+                                Glyph="&#xE7E8;" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Launch on startup" />
+                                <TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Start Kontext when you sign in to Windows" />
+                            </StackPanel>
+                            <ToggleSwitch
+                                x:Name="LaunchOnStartupToggle"
+                                Grid.Column="2"
+                                MinWidth="0"
+                                Margin="0,0,-12,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="Launch on startup"
+                                IsOn="{x:Bind ViewModel.LaunchOnStartup, Mode=OneWay}"
+                                OffContent="{x:Null}"
+                                OnContent="{x:Null}"
+                                Toggled="OnLaunchOnStartupToggled" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        Margin="1,0,0,4"
+                        AutomationProperties.HeadingLevel="Level2"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
                         Text="About" />
 
                     <Border Style="{StaticResource SettingsCardStyle}">

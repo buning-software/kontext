@@ -1,5 +1,5 @@
 using Kontext.Domain;
-using Kontext.TestSupport;
+using Kontext.Testing;
 using Microsoft.Extensions.Time.Testing;
 
 namespace Kontext.Presentation.UnitTests;
@@ -36,6 +36,7 @@ public class IssueSidebarAutoRefreshTests
             new InMemoryHiddenRepositoryStore(),
             new InMemoryCollapsedRepositoryStore(),
             new FakeSessionStore(),
+            new FakeTranscripts(),
             _clock,
             new RefreshOptions(interval));
 

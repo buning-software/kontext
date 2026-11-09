@@ -1,6 +1,6 @@
 using Kontext.Domain;
 using Kontext.Kernel;
-using Kontext.TestSupport;
+using Kontext.Testing;
 using Microsoft.Extensions.Time.Testing;
 
 namespace Kontext.Presentation.UnitTests;

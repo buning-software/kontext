@@ -17,6 +17,8 @@ public sealed class KontextApp : App
 
     public SidebarPage Sidebar => new(MainWindow);
 
+    public SettingsPage Settings => new(MainWindow);
+
     public IssueDetailPage IssueDetail => new(MainWindow);
 
     public GitTabPage GitTab => new(MainWindow);

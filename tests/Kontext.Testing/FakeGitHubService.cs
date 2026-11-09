@@ -1,0 +1,79 @@
+using Kontext.Contracts;
+using Kontext.Domain;
+using Kontext.Kernel;
+
+namespace Kontext.Testing;
+
+public sealed class FakeGitHubService : IGitHubService
+{
+    private readonly List<TaskCompletionSource<IReadOnlyList<GitHubIssue>>> _pending = [];
+
+    public IReadOnlyList<GitHubIssue> Issues { get; set; } = [];
+
+    public List<GitHubIssue> ClosedIssues { get; } = [];
+
+    public Exception? FailWith { get; set; }
+
+    public bool Deferred { get; set; }
+
+    public int Calls { get; private set; }
+
+    public void Complete(int callIndex, IReadOnlyList<GitHubIssue> issues) => _pending[callIndex].SetResult(issues);
+
+    public Task<IReadOnlyList<GitHubIssue>> GetIssuesAsync(RepositoryRef? repository = null, CancellationToken cancellationToken = default)
+    {
+        Calls++;
+
+        if (FailWith is not null)
+        {
+            return Task.FromException<IReadOnlyList<GitHubIssue>>(FailWith);
+        }
+
+        if (!Deferred)
+        {
+            return Task.FromResult(Issues);
+        }
+
+        var source = new TaskCompletionSource<IReadOnlyList<GitHubIssue>>();
+        _pending.Add(source);
+        return source.Task;
+    }
+
+    public GitHubUser SignedInAs { get; set; } = new("octocat", "The Octocat", new Uri("https://github.com/octocat"));
+
+    public GitHubUser EnterpriseSignedInAs { get; set; } = new("corpuser", "Corp User", new Uri("https://github.corp.com/corpuser"), "github.corp.com");
+
+    public List<string> HostsTried { get; } = [];
+
+    public List<string> SignedOutHosts { get; } = [];
+
+    public Exception? AuthenticationFailsWith { get; set; }
+
+    public List<string> TokensTried { get; } = [];
+
+    public int SignOuts { get; private set; }
+
+    public Action<string>? OnAuthenticate { get; set; }
+
+    public Task<GitHubUser> AuthenticateAsync(string host, string accessToken, CancellationToken cancellationToken = default)
+    {
+        HostsTried.Add(host);
+        TokensTried.Add(accessToken);
+        OnAuthenticate?.Invoke(accessToken);
+        var user = GitHubHosts.IsDefault(host) ? SignedInAs : EnterpriseSignedInAs with { Host = host };
+        return AuthenticationFailsWith is null ? Task.FromResult(user) : Task.FromException<GitHubUser>(AuthenticationFailsWith);
+    }
+
+    public void SignOut(string host)
+    {
+        SignOuts++;
+        SignedOutHosts.Add(host);
+    }
+
+
+    public Task<GitHubIssue> GetIssueAsync(RepositoryRef repository, int number, CancellationToken cancellationToken = default)
+    {
+        var found = ClosedIssues.Concat(Issues).FirstOrDefault(issue => issue.Number == number && string.Equals(issue.Repository.FullName, repository.FullName, StringComparison.OrdinalIgnoreCase));
+        return found is null ? Task.FromException<GitHubIssue>(new TestKontextException("not found")) : Task.FromResult(found);
+    }
+}

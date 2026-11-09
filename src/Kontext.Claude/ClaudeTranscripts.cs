@@ -1,4 +1,5 @@
 using System.Globalization;
+using Kontext.Contracts;
 using Kontext.Domain;
 
 namespace Kontext.Claude;

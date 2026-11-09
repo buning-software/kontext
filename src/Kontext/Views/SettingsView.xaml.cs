@@ -1,4 +1,4 @@
-using System.Reflection;
+using System.ComponentModel;
 using Kontext.Presentation;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -11,9 +11,71 @@ public sealed partial class SettingsView : UserControl
         nameof(ViewModel),
         typeof(ShellViewModel),
         typeof(SettingsView),
-        new PropertyMetadata(null, (view, _) => ((SettingsView)view).Bindings?.Update()));
+        new PropertyMetadata(null, (view, _) => ((SettingsView)view).OnViewModelChanged()));
 
-    public SettingsView() => InitializeComponent();
+    private ShellViewModel? _attached;
+
+    public SettingsView()
+    {
+        InitializeComponent();
+        Loaded += (_, _) => Attach();
+        Unloaded += (_, _) => Detach();
+    }
+
+    private void OnViewModelChanged()
+    {
+        Detach();
+        Bindings?.Update();
+        if (IsLoaded)
+        {
+            Attach();
+        }
+    }
+
+    private void Attach()
+    {
+        if (ViewModel is not { } viewModel || ReferenceEquals(_attached, viewModel))
+        {
+            return;
+        }
+
+        _attached = viewModel;
+        viewModel.Workspace.PropertyChanged += OnWorkspaceChanged;
+        viewModel.RefreshStartupCommand.Execute(null);
+    }
+
+    private void Detach()
+    {
+        _attached?.Workspace.PropertyChanged -= OnWorkspaceChanged;
+        _attached = null;
+    }
+
+    private void OnWorkspaceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WorkspaceViewModel.IsSettingsOpen) && ViewModel is { Workspace.IsSettingsOpen: true } viewModel)
+        {
+            viewModel.RefreshStartupCommand.Execute(null);
+        }
+    }
+
+    private async void OnLaunchOnStartupToggled(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } viewModel || LaunchOnStartupToggle.IsOn == viewModel.LaunchOnStartup)
+        {
+            return;
+        }
+
+        LaunchOnStartupToggle.IsEnabled = false;
+        try
+        {
+            await viewModel.SetLaunchOnStartupCommand.ExecuteAsync(LaunchOnStartupToggle.IsOn);
+            LaunchOnStartupToggle.IsOn = viewModel.LaunchOnStartup;
+        }
+        finally
+        {
+            LaunchOnStartupToggle.IsEnabled = true;
+        }
+    }
 
     public ShellViewModel? ViewModel
     {
@@ -21,21 +83,5 @@ public sealed partial class SettingsView : UserControl
         set => SetValue(ViewModelProperty, value);
     }
 
-    public string AppVersion { get; } = ReadAppVersion();
-
-    private static string ReadAppVersion()
-    {
-        var assembly = Assembly.GetEntryAssembly() ?? typeof(SettingsView).Assembly;
-        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        if (!string.IsNullOrWhiteSpace(informational))
-        {
-            // Strip the source revision suffix ("+<hash>") that the SDK appends.
-            var plus = informational.IndexOf('+', StringComparison.Ordinal);
-            var version = plus >= 0 ? informational[..plus] : informational;
-            return $"Version {version}";
-        }
-
-        var fallback = assembly.GetName().Version;
-        return fallback is null ? "Version unknown" : $"Version {fallback}";
-    }
+    public string AppVersion { get; } = $"Version {typeof(SettingsView).Assembly.GetName().Version?.ToString(3)}";
 }

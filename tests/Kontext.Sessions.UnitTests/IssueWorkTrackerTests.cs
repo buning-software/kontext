@@ -1,7 +1,7 @@
 using Kontext.Contracts;
 using Kontext.Domain;
 using Kontext.Kernel;
-using Kontext.TestSupport;
+using Kontext.Testing;
 
 namespace Kontext.Sessions.UnitTests;
 

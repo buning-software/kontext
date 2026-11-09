@@ -7,7 +7,7 @@ using Kontext.Kernel;
 using Kontext.Presentation;
 using Kontext.Sessions;
 using Kontext.TerminalHost;
-using Kontext.TestSupport;
+using Kontext.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kontext.CompositionTests;
@@ -35,6 +35,7 @@ public class CompositionTests
         services.AddSingleton<IGitHubTokenStore>(new FakeTokenStore());
         services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
         services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
+        services.AddSingleton<IStartupRegistration, FakeStartupRegistration>();
         services.AddSingleton<IUiDispatcher, ImmediateDispatcher>();
         services.AddSingleton<IConfirmation, FakeConfirmation>();
         services.AddSingleton<ITerminalSessionService, FakeTerminalService>();
