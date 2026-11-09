@@ -6,6 +6,7 @@ public abstract class ShellViewModelFixture
 {
     private SelectionAutoStart _autoStart = null!;
     private IssueDetailViewModel _detail = null!;
+    private GeneralSessionViewModel _general = null!;
 
     protected FakeGitHubService GitHub { get; private set; } = null!;
 
@@ -26,6 +27,7 @@ public abstract class ShellViewModelFixture
     public void Dispose()
     {
         _detail.Dispose();
+        _general.Dispose();
         Sidebar.Dispose();
         _autoStart.Dispose();
     }
@@ -41,6 +43,7 @@ public abstract class ShellViewModelFixture
         _autoStart = new SelectionAutoStart(coordinator, tracker, new InMemoryIssueSessionRegistry(), TimeProvider.System, AutoStartOptions.Default);
         Sidebar = new IssueSidebarViewModel(GitHub, tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(GitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), TimeProvider.System);
         _detail = new IssueDetailViewModel(coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), TimeProvider.System, GitChangesOptions.Default));
-        Shell = new ShellViewModel(GitHub, DeviceLogin, Tokens, EnterprisePrompt, new WorkspaceViewModel(Sidebar, _detail, _autoStart));
+        _general = new GeneralSessionViewModel(new FakeGeneralSessionCoordinator());
+        Shell = new ShellViewModel(GitHub, DeviceLogin, Tokens, EnterprisePrompt, new WorkspaceViewModel(Sidebar, _detail, _general, _autoStart));
     }
 }

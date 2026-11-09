@@ -5,14 +5,6 @@
     xmlns:views="using:Kontext.Views">
 
     <Grid>
-        <views:SignInView
-            Margin="24"
-            ViewModel="{x:Bind ViewModel}"
-            Visibility="{x:Bind ViewModel.ShowSignIn, Mode=OneWay}" />
-
-        <views:WorkspaceView
-            ControlHost="{x:Bind ControlHost}"
-            ViewModel="{x:Bind ViewModel}"
-            Visibility="{x:Bind ViewModel.ShowWorkspace, Mode=OneWay}" />
+        <views:WorkspaceView ControlHost="{x:Bind ControlHost}" ViewModel="{x:Bind ViewModel}" />
     </Grid>
 </Page>

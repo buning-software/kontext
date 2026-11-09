@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<GitChangesViewModel>();
         services.AddTransient<IssueDetailViewModel>();
+        services.AddTransient<GeneralSessionViewModel>();
         services.AddTransient<WorkspaceViewModel>();
         services.AddTransient<ShellViewModel>();
 

@@ -58,6 +58,7 @@ public class CompositionTests
         typeof(IIssueWorkTracker),
         typeof(IIssueSessionRegistry),
         typeof(IIssueSessionCoordinator),
+        typeof(IGeneralSessionCoordinator),
         typeof(IClaudeLauncher),
         typeof(IWorkspaceOpener),
         typeof(IWorkspaceChanges),
@@ -72,6 +73,7 @@ public class CompositionTests
         typeof(WorkspaceViewModel),
         typeof(IssueSidebarViewModel),
         typeof(IssueDetailViewModel),
+        typeof(GeneralSessionViewModel),
         typeof(GitChangesViewModel),
         typeof(AppLifetime),
     ];

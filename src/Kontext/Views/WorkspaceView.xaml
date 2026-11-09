@@ -50,10 +50,25 @@
             </NavigationViewItem>
         </DataTemplate>
 
+        <DataTemplate x:Key="GeneralTemplate" x:DataType="vm:GeneralSessionViewModel">
+            <NavigationViewItem
+                AutomationProperties.AutomationId="ClaudeEntry"
+                AutomationProperties.Name="{x:Bind Title}"
+                ToolTipService.ToolTip="Ask Claude something, not linked to an issue">
+                <TextBlock VerticalAlignment="Center" Text="{x:Bind Title}" />
+            </NavigationViewItem>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SeparatorTemplate" x:DataType="vm:SidebarSeparator">
+            <NavigationViewItemSeparator />
+        </DataTemplate>
+
         <views:SidebarTemplateSelector
             x:Key="SidebarTemplateSelector"
+            GeneralTemplate="{StaticResource GeneralTemplate}"
             GroupTemplate="{StaticResource GroupTemplate}"
-            IssueTemplate="{StaticResource IssueTemplate}" />
+            IssueTemplate="{StaticResource IssueTemplate}"
+            SeparatorTemplate="{StaticResource SeparatorTemplate}" />
     </UserControl.Resources>
 
     <NavigationView
@@ -65,7 +80,7 @@
         ItemInvoked="Navigation_ItemInvoked"
         SelectionChanged="Navigation_SelectionChanged"
         MenuItemTemplateSelector="{StaticResource SidebarTemplateSelector}"
-        MenuItemsSource="{x:Bind ViewModel.Workspace.Sidebar.MenuGroups, Mode=OneWay}"
+        MenuItemsSource="{x:Bind ViewModel.Workspace.MenuItems, Mode=OneWay}"
         OpenPaneLength="340"
         PaneDisplayMode="Left">
 
@@ -244,6 +259,15 @@
                 ControlHost="{x:Bind ControlHost, Mode=OneWay}"
                 ViewModel="{x:Bind ViewModel.Workspace.Detail}"
                 Visibility="{x:Bind views:VisibilityFormat.VisibleWhenNot(ViewModel.Workspace.IsDetailVisible, ViewModel.IsStarting), Mode=OneWay}" />
+            <views:SignInView
+                Padding="24"
+                Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+                ViewModel="{x:Bind ViewModel}"
+                Visibility="{x:Bind views:VisibilityFormat.VisibleWhen(ViewModel.ShowSignIn, ViewModel.Workspace.IsDetailVisible), Mode=OneWay}" />
+            <views:GeneralSessionView
+                ControlHost="{x:Bind ControlHost, Mode=OneWay}"
+                ViewModel="{x:Bind ViewModel.Workspace.General}"
+                Visibility="{x:Bind ViewModel.Workspace.IsGeneralOpen, Mode=OneWay}" />
             <views:SettingsView
                 ViewModel="{x:Bind ViewModel}"
                 Visibility="{x:Bind ViewModel.Workspace.IsSettingsOpen, Mode=OneWay}" />

@@ -52,9 +52,13 @@ public sealed partial class WorkspaceView : UserControl
         {
             ViewModel.Workspace.IsSettingsOpen = true;
         }
+        else if (args.SelectedItem is GeneralSessionViewModel)
+        {
+            ViewModel.Workspace.OpenGeneral();
+        }
         else if (args.SelectedItem is IssueItemViewModel issue)
         {
-            ViewModel.Workspace.IsSettingsOpen = false;
+            ViewModel.Workspace.OpenIssue();
             ViewModel.Workspace.Sidebar.SelectedItem = issue;
         }
     }

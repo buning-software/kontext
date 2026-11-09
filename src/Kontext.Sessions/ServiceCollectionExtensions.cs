@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IIssueWorkTracker, IssueWorkTracker>();
         services.AddSingleton<IIssueSessionCoordinator, IssueSessionCoordinator>();
         services.AddSingleton<IIssueSessionClearer, IssueSessionClearer>();
+        services.AddSingleton<IGeneralSessionCoordinator, GeneralSessionCoordinator>();
         return services;
     }
 }

@@ -93,7 +93,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
     public partial bool IsConfirmingClear { get; set; }
 
     /// <summary>
-    /// True while another page (the settings) covers the detail pane. The terminal is a native window that XAML cannot
+    /// True while another page (the settings or the general Claude terminal) covers the detail pane. The terminal is a native window that XAML cannot
     /// hide by collapsing its parent, so no session is shown then.
     /// </summary>
     [ObservableProperty]

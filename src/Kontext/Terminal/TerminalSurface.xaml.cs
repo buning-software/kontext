@@ -38,5 +38,5 @@ public sealed partial class TerminalSurface : UserControl
         ShowSession();
     }
 
-    private void ShowSession() => ControlHost?.Show((Session as EasyTerminalSession)?.Control);
+    private void ShowSession() => TerminalControlHost.Show((Session as EasyTerminalSession)?.Control, Root);
 }

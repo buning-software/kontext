@@ -193,4 +193,24 @@ public class ShellViewModelSignInTests : ShellViewModelFixture
         Assert.That(Shell.IsStarting, Is.True);
         Assert.That(Shell.ShowSignIn, Is.False, "the form only shows once startup has finished");
     }
+
+    [Test]
+    public void SigningOutWhileTheSettingsAreOpenReturnsToTheIssuePage()
+    {
+        Shell.Workspace.IsSettingsOpen = true;
+
+        Shell.SignOutCommand.Execute(null);
+
+        Assert.That(Shell.Workspace.CurrentPage, Is.EqualTo(WorkspacePage.Issue));
+    }
+
+    [Test]
+    public void SigningOutWhileTheGeneralPageIsOpenKeepsTheGeneralPage()
+    {
+        Shell.Workspace.OpenGeneral();
+
+        Shell.SignOutCommand.Execute(null);
+
+        Assert.That(Shell.Workspace.IsGeneralOpen, Is.True, "the Claude terminal does not depend on a GitHub account");
+    }
 }

@@ -75,6 +75,19 @@ public sealed class FakeClaudeLauncher : IClaudeLauncher
 
     public List<(StoredSession? Earlier, WorktreeInfo Worktree)> Calls { get; } = [];
 
+    public List<string> GeneralCalls { get; } = [];
+
+    public ClaudeLaunch PrepareGeneral(string workingDirectory)
+    {
+        GeneralCalls.Add(workingDirectory);
+
+        return new ClaudeLaunch(
+            TerminalSessionId.New(),
+            new TerminalSessionOptions(workingDirectory, "claude", ["--general"]),
+            ReportsItself: false,
+            Resumed: false);
+    }
+
     public ClaudeLaunch Prepare(StoredSession? earlier, WorktreeInfo worktree)
     {
         Calls.Add((earlier, worktree));
