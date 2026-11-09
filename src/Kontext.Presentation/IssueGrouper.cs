@@ -1,7 +1,5 @@
 namespace Kontext.Presentation;
 
-public sealed record IssueGroup<T>(string Repository, IReadOnlyList<T> Items);
-
 public static class IssueGrouper
 {
     public static IReadOnlyList<IssueGroup<T>> Group<T>(

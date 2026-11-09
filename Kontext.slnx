@@ -25,7 +25,7 @@
     <Project Path="tests/Kontext.Sessions.UnitTests/Kontext.Sessions.UnitTests.csproj" />
     <Project Path="tests/Kontext.Sessions.IntegrationTests/Kontext.Sessions.IntegrationTests.csproj" />
     <Project Path="tests/Kontext.TerminalHost.UnitTests/Kontext.TerminalHost.UnitTests.csproj" />
-    <Project Path="tests/Kontext.TestSupport/Kontext.TestSupport.csproj" />
+    <Project Path="tests/Kontext.Testing/Kontext.Testing.csproj" />
     <Project Path="tests/Kontext.UiTests/Kontext.UiTests.csproj" />
   </Folder>
 </Solution>

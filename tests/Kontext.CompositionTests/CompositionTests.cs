@@ -7,7 +7,7 @@ using Kontext.Kernel;
 using Kontext.Presentation;
 using Kontext.Sessions;
 using Kontext.TerminalHost;
-using Kontext.TestSupport;
+using Kontext.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kontext.CompositionTests;

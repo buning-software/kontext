@@ -1,5 +1,5 @@
 using Kontext.Kernel;
-using Kontext.TestSupport;
+using Kontext.Testing;
 
 namespace Kontext.GitAutomation.IntegrationTests;
 

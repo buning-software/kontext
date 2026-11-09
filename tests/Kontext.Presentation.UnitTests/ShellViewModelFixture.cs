@@ -1,4 +1,4 @@
-using Kontext.TestSupport;
+using Kontext.Testing;
 
 namespace Kontext.Presentation.UnitTests;
 

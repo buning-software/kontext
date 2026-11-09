@@ -25,7 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Kontext.GitAutomation\Kontext.GitAutomation.csproj" />
-    <ProjectReference Include="..\Kontext.TestSupport\Kontext.TestSupport.csproj" />
+    <ProjectReference Include="..\Kontext.Testing\Kontext.Testing.csproj" />
   </ItemGroup>
 
 </Project>

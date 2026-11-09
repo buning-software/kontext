@@ -1,16 +1,5 @@
 namespace Kontext.Domain;
 
-public enum DiffLineKind
-{
-    Context,
-    Added,
-    Removed,
-    HunkHeader,
-    Note,
-}
-
-public sealed record DiffLine(DiffLineKind Kind, int? OldNumber, int? NewNumber, string Text);
-
 /// <summary>The diff of one file. <paramref name="Notice"/> explains a missing or cut-off diff (binary, too large, conflict).</summary>
 public sealed record FileDiff(string Path, IReadOnlyList<DiffLine> Lines, string? Notice = null)
 {

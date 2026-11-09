@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
 using Kontext.Domain;
-using Kontext.TestSupport;
+using Kontext.Testing;
 
 namespace Kontext.Claude.IntegrationTests;
 
