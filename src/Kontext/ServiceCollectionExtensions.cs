@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddSingleton<IStartupRegistration, RunKeyStartupRegistration>();
+            services.AddSingleton<IStartupRegistration>(new RunKeyStartupRegistration(RunKeyValueName()));
         }
 
         services.AddSingleton<IUiDispatcher>(_ => new DispatcherQueueDispatcher(DispatcherQueue.GetForCurrentThread()));
@@ -78,6 +78,11 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    private static string RunKeyValueName() =>
+        UiTestServiceCollectionExtensions.IsEnabled && Environment.GetEnvironmentVariable("KONTEXT_STARTUP_VALUE_NAME") is { Length: > 0 } name
+            ? name
+            : "Kontext";
 
     private static TimeSpan RefreshInterval(IConfiguration configuration) =>
         int.TryParse(configuration["Refresh:IntervalSeconds"], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var seconds) && seconds >= 0

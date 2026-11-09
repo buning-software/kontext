@@ -4,11 +4,10 @@ using Microsoft.Win32;
 
 namespace Kontext.Startup;
 
-internal sealed class RunKeyStartupRegistration : IStartupRegistration
+internal sealed class RunKeyStartupRegistration(string valueName) : IStartupRegistration
 {
     private const string RunPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ApprovedPath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
-    private const string ValueName = "Kontext";
 
     private static string? ExePath
     {
@@ -30,31 +29,31 @@ internal sealed class RunKeyStartupRegistration : IStartupRegistration
             var exe = ExePath ?? throw new InvalidOperationException("Kontext is running through the dotnet host, so there is no Kontext.exe to start at sign-in.");
             using (var run = Registry.CurrentUser.CreateSubKey(RunPath))
             {
-                run.SetValue(ValueName, $"\"{exe}\" {StartupActivation.Flag}", RegistryValueKind.String);
+                run.SetValue(valueName, $"\"{exe}\" {StartupActivation.Flag}", RegistryValueKind.String);
             }
 
             using var approved = Registry.CurrentUser.OpenSubKey(ApprovedPath, writable: true);
-            approved?.DeleteValue(ValueName, throwOnMissingValue: false);
+            approved?.DeleteValue(valueName, throwOnMissingValue: false);
         }
         else
         {
             using var run = Registry.CurrentUser.OpenSubKey(RunPath, writable: true);
-            run?.DeleteValue(ValueName, throwOnMissingValue: false);
+            run?.DeleteValue(valueName, throwOnMissingValue: false);
         }
 
         return Task.FromResult(Read());
     }
 
-    private static StartupState Read()
+    private StartupState Read()
     {
         using var run = Registry.CurrentUser.OpenSubKey(RunPath);
-        if (run?.GetValue(ValueName) is not string { Length: > 0 })
+        if (run?.GetValue(valueName) is not string { Length: > 0 })
         {
             return StartupState.Disabled;
         }
 
         using var approved = Registry.CurrentUser.OpenSubKey(ApprovedPath);
-        var flags = approved?.GetValue(ValueName) as byte[];
+        var flags = approved?.GetValue(valueName) as byte[];
         return flags is { Length: > 0 } && (flags[0] & 1) == 1 ? StartupState.DisabledByUser : StartupState.Enabled;
     }
 }
