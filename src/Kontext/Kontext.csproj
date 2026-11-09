@@ -10,6 +10,7 @@
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <EnableMsixTooling>true</EnableMsixTooling>
     <!-- Runs unpackaged for development; the release pipeline builds the MSIX with -p:WindowsPackageType=MSIX. -->
     <WindowsPackageType>None</WindowsPackageType>

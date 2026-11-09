@@ -192,3 +192,9 @@ public sealed class FakeConfirmation : IConfirmation
 
     public void Respond(bool answer) => _pending!.SetResult(answer);
 }
+public sealed class FakeTranscripts : IClaudeTranscripts
+{
+    public bool Present { get; set; } = true;
+
+    public bool Exists(TerminalSessionId sessionId) => Present;
+}

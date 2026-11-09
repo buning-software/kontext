@@ -36,6 +36,7 @@ public class IssueSidebarAutoRefreshTests
             new InMemoryHiddenRepositoryStore(),
             new InMemoryCollapsedRepositoryStore(),
             new FakeSessionStore(),
+            new FakeTranscripts(),
             _clock,
             new RefreshOptions(interval));
 

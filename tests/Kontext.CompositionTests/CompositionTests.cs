@@ -35,6 +35,7 @@ public class CompositionTests
         services.AddSingleton<IGitHubTokenStore>(new FakeTokenStore());
         services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
         services.AddSingleton<IEnterpriseServerPrompt>(new FakeEnterprisePrompt());
+        services.AddSingleton<IStartupRegistration, FakeStartupRegistration>();
         services.AddSingleton<IUiDispatcher, ImmediateDispatcher>();
         services.AddSingleton<IConfirmation, FakeConfirmation>();
         services.AddSingleton<ITerminalSessionService, FakeTerminalService>();

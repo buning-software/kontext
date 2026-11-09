@@ -15,9 +15,10 @@ public class IssueSidebarViewModelTests
 
     private InMemoryCollapsedRepositoryStore _collapsedStore = null!;
     private FakeSessionStore _sessionStore = null!;
+    private FakeTranscripts _transcripts = null!;
 
     private IssueSidebarViewModel CreateSidebarWith(InMemoryHiddenRepositoryStore hiddenStore, InMemoryCollapsedRepositoryStore? collapsedStore = null) =>
-        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, collapsedStore ?? _collapsedStore, _sessionStore, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
+        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, collapsedStore ?? _collapsedStore, _sessionStore, _transcripts, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
 
     [SetUp]
     public void CreateSidebar()
@@ -25,6 +26,7 @@ public class IssueSidebarViewModelTests
         _hiddenStore = new InMemoryHiddenRepositoryStore();
         _collapsedStore = new InMemoryCollapsedRepositoryStore();
         _sessionStore = new FakeSessionStore();
+        _transcripts = new FakeTranscripts();
         _tracker = new InMemoryIssueWorkTracker();
         _gitHub = new FakeGitHubService();
         _finder = new FakeExistingWorkspaceFinder();
@@ -348,6 +350,20 @@ public class IssueSidebarViewModelTests
         var item = _sidebar.Groups.SelectMany(group => group.Items).Single(candidate => candidate.Issue.Number == 4);
         Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.NeedsInput));
         Assert.That(_tracker.StateOf(key).Status, Is.EqualTo(IssueWorkStatus.Ready), "the tracked state stays Ready so selecting the issue still resumes it");
+    }
+
+    [Test]
+    public async Task ShowsAWorktreeWhoseSessionWasNeverUsedAsReadyNotAsNeedingInput()
+    {
+        var key = new IssueKey("acme/memento", 4);
+        _finder.Found.Add(new ExistingWorkspace(new RepositoryRef("acme", "memento"), 4, new WorktreeInfo(@"C:\wt\4", "kontext/4-add-notifications", "abc", IsMain: false)));
+        _sessionStore.Save(new StoredSession(key, TerminalSessionId.New(), @"C:\wt\4", "kontext/4-add-notifications"));
+        _transcripts.Present = false;
+
+        await Refresh();
+
+        var item = _sidebar.Groups.SelectMany(group => group.Items).Single(candidate => candidate.Issue.Number == 4);
+        Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.Ready));
     }
 
     [Test]

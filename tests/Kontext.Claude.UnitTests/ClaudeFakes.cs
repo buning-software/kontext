@@ -1,3 +1,4 @@
+using Kontext.Contracts;
 using Kontext.Domain;
 
 namespace Kontext.Claude.UnitTests;

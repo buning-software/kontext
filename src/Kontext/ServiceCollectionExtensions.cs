@@ -7,6 +7,7 @@ using Kontext.Kernel;
 using Kontext.Presentation;
 using Kontext.Services;
 using Kontext.Sessions;
+using Kontext.Startup;
 using Kontext.Terminal;
 using Kontext.TerminalHost;
 using Kontext.Tray;
@@ -47,6 +48,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConfirmation, ContentDialogConfirmation>();
         services.AddSingleton<IGitHubTokenStore, CredentialLockerTokenStore>();
         services.AddSingleton<IEnterpriseServerPrompt, ContentDialogEnterprisePrompt>();
+        if (PackageIdentity.IsPackaged)
+        {
+            services.AddSingleton<IStartupRegistration, MsixStartupRegistration>();
+        }
+        else
+        {
+            services.AddSingleton<IStartupRegistration, RunKeyStartupRegistration>();
+        }
 
         services.AddSingleton<IUiDispatcher>(_ => new DispatcherQueueDispatcher(DispatcherQueue.GetForCurrentThread()));
 

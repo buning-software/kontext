@@ -11,9 +11,13 @@ public sealed partial class ShellViewModel(
     IGitHubDeviceLogin deviceLogin,
     IGitHubTokenStore tokenStore,
     IEnterpriseServerPrompt enterprisePrompt,
+    IStartupRegistration startup,
     WorkspaceViewModel workspace) : ObservableObject
 {
     public WorkspaceViewModel Workspace { get; } = workspace;
+
+    [ObservableProperty]
+    public partial bool LaunchOnStartup { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(ShowWorkspace), nameof(SignedInText), nameof(GitHubStatusText), nameof(HasGitHubAccount), nameof(HasNoGitHubAccount))]
@@ -77,6 +81,54 @@ public sealed partial class ShellViewModel(
     public string GitHubStatusText => User is null ? "Not signed in" : SignedInText;
 
     public string EnterpriseStatusText => EnterpriseUser is null ? "Not signed in" : EnterpriseSignedInText;
+
+    [RelayCommand]
+    private async Task RefreshStartupAsync()
+    {
+        try
+        {
+            LaunchOnStartup = await startup.GetStateAsync() == StartupState.Enabled;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LaunchOnStartup = false;
+            ErrorMessage = $"Could not read the launch on startup setting: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task SetLaunchOnStartupAsync(bool enabled)
+    {
+        if (enabled == LaunchOnStartup)
+        {
+            return;
+        }
+
+        ErrorMessage = null;
+        try
+        {
+            var state = await startup.SetEnabledAsync(enabled);
+            LaunchOnStartup = state == StartupState.Enabled;
+            if (!enabled && LaunchOnStartup)
+            {
+                ErrorMessage = "Windows kept launch on startup enabled. Turn it off in Windows Settings > Apps > Startup, or ask your administrator if it is managed by policy.";
+            }
+            else if (enabled && !LaunchOnStartup)
+            {
+                ErrorMessage = state switch
+                {
+                    StartupState.DisabledByUser => "Windows blocked launch on startup because it was turned off for Kontext. Turn it on in Windows Settings > Apps > Startup.",
+                    StartupState.DisabledByPolicy => "Launch on startup is disabled by your organization's policy.",
+                    _ => "Windows did not enable launch on startup.",
+                };
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await RefreshStartupAsync();
+            ErrorMessage = $"Could not change launch on startup: {ex.Message}";
+        }
+    }
 
     [RelayCommand]
     private async Task InitializeAsync()
