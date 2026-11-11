@@ -1,4 +1,3 @@
-
 namespace Kontext.GitAutomation;
 
 public static class GitProcessExtensions
@@ -14,10 +13,15 @@ public static class GitProcessExtensions
         var result = await git.RunAsync(workingDirectory, arguments, cancellationToken);
         if (!result.Succeeded)
         {
-            var detail = string.IsNullOrWhiteSpace(result.StandardError) ? result.StandardOutput.Trim() : result.StandardError.Trim();
-            throw new GitAutomationException($"git {string.Join(' ', arguments)} failed: {detail}", result.ExitCode, result.StandardError);
+            throw Failure(result);
         }
 
         return result;
+    }
+
+    internal static GitAutomationException Failure(GitResult result)
+    {
+        var detail = string.IsNullOrWhiteSpace(result.StandardError) ? result.StandardOutput : result.StandardError;
+        return new GitAutomationException(GitFailureDescriber.Describe(detail), result.ExitCode, detail);
     }
 }

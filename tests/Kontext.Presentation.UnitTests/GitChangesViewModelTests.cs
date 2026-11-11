@@ -15,13 +15,16 @@ public class GitChangesViewModelTests
     private FakeTimeProvider _clock = null!;
     private GitChangesViewModel _vm = null!;
 
+    private ErrorBarViewModel Errors { get; set; } = null!;
+
     [SetUp]
     public void CreateViewModel()
     {
         _fake = new FakeWorkspaceChanges();
         _committer = new FakeWorkspaceCommitter();
+        Errors = new ErrorBarViewModel();
         _clock = new FakeTimeProvider();
-        _vm = new GitChangesViewModel(_fake, _committer, _clock, new GitChangesOptions(Interval));
+        _vm = new GitChangesViewModel(_fake, _committer, Errors, _clock, new GitChangesOptions(Interval));
     }
 
     [TearDown]
@@ -351,8 +354,8 @@ public class GitChangesViewModelTests
         _fake.FailWith = new InvalidOperationException("git exploded");
         _clock.Advance(Interval);
 
-        await WaitFor(() => _vm.HasError, "the error to show");
-        Assert.That(_vm.ErrorMessage, Is.EqualTo("git exploded"));
+        await WaitFor(() => Errors.IsOpen, "the error to show");
+        Assert.That(Errors.Message, Is.EqualTo("git exploded"));
         Assert.That(_vm.Rows, Has.Count.EqualTo(2), "the last good list stays");
         Assert.That(_vm.HasLoaded, Is.True);
         Assert.That(_vm.IsEmpty, Is.False);
@@ -366,13 +369,13 @@ public class GitChangesViewModelTests
         await WaitForLoaded();
         _fake.FailWith = new InvalidOperationException("git exploded");
         _clock.Advance(Interval);
-        await WaitFor(() => _vm.HasError, "the error to show");
+        await WaitFor(() => Errors.IsOpen, "the error to show");
 
         _fake.FailWith = null;
         _clock.Advance(Interval);
 
-        await WaitFor(() => !_vm.HasError, "the error to clear");
-        Assert.That(_vm.ErrorMessage, Is.Null);
+        await WaitFor(() => !Errors.IsOpen, "the error to clear");
+        Assert.That(Errors.Message, Is.Null);
     }
 
     [Test]
@@ -382,7 +385,7 @@ public class GitChangesViewModelTests
 
         Activate();
 
-        await WaitFor(() => _vm.HasError, "the error to show");
+        await WaitFor(() => Errors.IsOpen, "the error to show");
         Assert.That(_vm.HasLoaded, Is.False);
         Assert.That(_vm.IsEmpty, Is.False);
     }
@@ -512,7 +515,7 @@ public class GitChangesViewModelTests
         Assert.That(_vm.CommitMessage, Is.Empty);
         Assert.That(_vm.CheckedCount, Is.Zero);
         Assert.That(_vm.UnpushedCount, Is.EqualTo(1));
-        Assert.That(_vm.HasActionError, Is.False);
+        Assert.That(Errors.IsOpen, Is.False);
     }
 
     [Test]
@@ -524,9 +527,9 @@ public class GitChangesViewModelTests
         _committer.CommitFailure = new InvalidOperationException("hook rejected the commit");
 
         _vm.CommitCommand.Execute(null);
-        await WaitFor(() => _vm.HasActionError, "the error to show");
+        await WaitFor(() => Errors.IsOpen, "the error to show");
 
-        Assert.That(_vm.ActionError, Is.EqualTo("hook rejected the commit"));
+        Assert.That(Errors.Message, Is.EqualTo("hook rejected the commit"));
         Assert.That(_vm.CommitMessage, Is.EqualTo("Fix a"));
         Assert.That(_vm.CheckedCount, Is.EqualTo(1));
         Assert.That(FileRow("a.cs").IsChecked, Is.True);
@@ -571,9 +574,9 @@ public class GitChangesViewModelTests
         await WaitFor(() => _vm.PushCommand.CanExecute(null), "push to be enabled");
 
         _vm.PushCommand.Execute(null);
-        await WaitFor(() => _vm.HasActionError && _vm.PushCommand.CanExecute(null), "the error to show and the push to finish");
+        await WaitFor(() => Errors.IsOpen && _vm.PushCommand.CanExecute(null), "the error to show and the push to finish");
 
-        Assert.That(_vm.ActionError, Is.EqualTo("Push rejected"));
+        Assert.That(Errors.Message, Is.EqualTo("Push rejected"));
         Assert.That(_vm.UnpushedCount, Is.EqualTo(1));
         Assert.That(_vm.PushCommand.CanExecute(null), Is.True);
     }

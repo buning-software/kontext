@@ -34,8 +34,11 @@ public abstract class ShellViewModelFixture
         _autoStart.Dispose();
     }
 
+    protected ErrorBarViewModel Errors { get; private set; } = null!;
+
     protected void Build(string? savedToken, string? savedEnterpriseToken = null)
     {
+        Errors = new ErrorBarViewModel();
         var tracker = new InMemoryIssueWorkTracker();
         var coordinator = new FakeCoordinator();
         GitHub = new FakeGitHubService { Issues = [Issues.Create(4, "Add notifications", "acme/memento")] };
@@ -44,9 +47,9 @@ public abstract class ShellViewModelFixture
         DeviceLogin = new FakeGitHubDeviceLogin();
         Startup = new FakeStartupRegistration();
         _autoStart = new SelectionAutoStart(coordinator, tracker, new InMemoryIssueSessionRegistry(), TimeProvider.System, AutoStartOptions.Default);
-        Sidebar = new IssueSidebarViewModel(GitHub, tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(GitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), new FakeTranscripts(), TimeProvider.System);
-        _detail = new IssueDetailViewModel(coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), TimeProvider.System, GitChangesOptions.Default));
+        Sidebar = new IssueSidebarViewModel(GitHub, tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(GitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), new FakeTranscripts(), Errors, TimeProvider.System);
+        _detail = new IssueDetailViewModel(coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), new InMemoryIssueSessionRegistry(), _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), Errors, TimeProvider.System, GitChangesOptions.Default));
         _general = new GeneralSessionViewModel(new FakeGeneralSessionCoordinator());
-        Shell = new ShellViewModel(GitHub, DeviceLogin, Tokens, EnterprisePrompt, Startup, new WorkspaceViewModel(Sidebar, _detail, _general, _autoStart));
+        Shell = new ShellViewModel(GitHub, DeviceLogin, Tokens, EnterprisePrompt, Startup, new WorkspaceViewModel(Sidebar, _detail, _general, _autoStart, Errors));
     }
 }

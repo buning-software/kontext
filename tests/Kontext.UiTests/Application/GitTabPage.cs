@@ -29,7 +29,10 @@ public sealed class GitTabPage(Element window)
 
     public Element PushButton => window.FindByAutomationId("GitPushButton");
 
-    public string? Error => window.TryFindByAutomationId("GitActionError", TimeSpan.Zero)?.Name;
+    /// <summary>The message in the error bar across the bottom of the window.</summary>
+    public string? Error => window.TryFindByAutomationId("ErrorBar", TimeSpan.Zero)?.Name;
+
+    public void CloseError() => window.Find(e => e.ControlType == ControlType.Button && e.Name == "Close").Click();
 
     public string? Status => window.TryFindByAutomationId("GitStatusMessage", TimeSpan.Zero)?.Name;
 }

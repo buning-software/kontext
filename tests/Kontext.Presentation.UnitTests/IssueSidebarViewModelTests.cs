@@ -12,18 +12,20 @@ public class IssueSidebarViewModelTests
     private FakeExistingWorkspaceFinder _finder = null!;
     private InMemoryHiddenRepositoryStore _hiddenStore = null!;
     private IssueSidebarViewModel _sidebar = null!;
+    private ErrorBarViewModel _errors = new();
 
     private InMemoryCollapsedRepositoryStore _collapsedStore = null!;
     private FakeSessionStore _sessionStore = null!;
     private FakeTranscripts _transcripts = null!;
 
     private IssueSidebarViewModel CreateSidebarWith(InMemoryHiddenRepositoryStore hiddenStore, InMemoryCollapsedRepositoryStore? collapsedStore = null) =>
-        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, collapsedStore ?? _collapsedStore, _sessionStore, _transcripts, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
+        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, collapsedStore ?? _collapsedStore, _sessionStore, _transcripts, _errors, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
 
     [SetUp]
     public void CreateSidebar()
     {
         _hiddenStore = new InMemoryHiddenRepositoryStore();
+        _errors = new ErrorBarViewModel();
         _collapsedStore = new InMemoryCollapsedRepositoryStore();
         _sessionStore = new FakeSessionStore();
         _transcripts = new FakeTranscripts();
@@ -53,7 +55,7 @@ public class IssueSidebarViewModelTests
 
         await Refresh();
 
-        Assert.That(_sidebar.ErrorMessage, Is.EqualTo("The request timed out."));
+        Assert.That(_errors.Message, Is.EqualTo("The request timed out."));
         Assert.That(_sidebar.IsLoading, Is.False);
     }
 
@@ -64,7 +66,7 @@ public class IssueSidebarViewModelTests
 
         await Refresh();
 
-        Assert.That(_sidebar.ErrorMessage, Is.Null);
+        Assert.That(_errors.Message, Is.Null);
         Assert.That(_sidebar.Groups.SelectMany(group => group.Items).Count(item => item.Issue.Number == 4), Is.EqualTo(1));
     }
 
@@ -633,7 +635,7 @@ public class IssueSidebarViewModelTests
 
         await Refresh();
 
-        Assert.That(_sidebar.ErrorMessage, Is.EqualTo("GitHub is down"));
+        Assert.That(_errors.Message, Is.EqualTo("GitHub is down"));
         Assert.That(_sidebar.HasError, Is.True);
         Assert.That(_sidebar.Groups, Is.Empty);
         Assert.That(_sidebar.IsLoading, Is.False);

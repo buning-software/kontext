@@ -33,7 +33,7 @@ public class IssueDetailViewModelTests
         _clock = new FakeTimeProvider();
         _autoStart = new SelectionAutoStart(_coordinator, _tracker, new InMemoryIssueSessionRegistry(), _clock, new AutoStartOptions(TimeSpan.FromSeconds(1)));
         _workspaceChanges = new FakeWorkspaceChanges();
-        var gitChanges = new GitChangesViewModel(_workspaceChanges, new FakeWorkspaceCommitter(), _clock, new GitChangesOptions(TimeSpan.FromSeconds(3)));
+        var gitChanges = new GitChangesViewModel(_workspaceChanges, new FakeWorkspaceCommitter(), new ErrorBarViewModel(), _clock, new GitChangesOptions(TimeSpan.FromSeconds(3)));
         _detail = new IssueDetailViewModel(_coordinator, _clearer, _confirmation, _opener, _registry, _autoStart, gitChanges);
     }
 

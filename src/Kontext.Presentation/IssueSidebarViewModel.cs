@@ -9,6 +9,8 @@ namespace Kontext.Presentation;
 
 public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposable
 {
+    private const string ErrorSource = "issue-sidebar";
+
     private readonly IGitHubService _gitHub;
     private readonly IIssueWorkTracker _tracker;
     private readonly IExistingWorkspaceFinder _existingWorkspaces;
@@ -17,6 +19,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     private readonly ICollapsedRepositoryStore _collapsedRepositories;
     private readonly ISessionStore _sessions;
     private readonly IClaudeTranscripts _transcripts;
+    private readonly ErrorBarViewModel _errors;
     private readonly TimeProvider _clock;
     private readonly RefreshOptions _refreshOptions;
     private readonly HashSet<string> _hidden;
@@ -40,6 +43,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         ICollapsedRepositoryStore collapsedRepositories,
         ISessionStore sessions,
         IClaudeTranscripts transcripts,
+        ErrorBarViewModel errors,
         TimeProvider clock,
         RefreshOptions? refreshOptions = null)
     {
@@ -51,6 +55,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _collapsedRepositories = collapsedRepositories;
         _sessions = sessions;
         _transcripts = transcripts;
+        _errors = errors;
         _clock = clock;
         _refreshOptions = refreshOptions ?? new RefreshOptions(TimeSpan.Zero);
         _hidden = new HashSet<string>(hiddenRepositories.Load(), StringComparer.OrdinalIgnoreCase);
@@ -87,10 +92,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     public partial string CountText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasError), nameof(IsEmpty))]
-    public partial string? ErrorMessage { get; set; }
-
-    public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    public partial bool HasError { get; set; }
 
     public bool IsEmpty => _loadedOnce && !IsLoading && !HasError && _all.Count == 0;
 
@@ -128,7 +131,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         SearchText = string.Empty;
         IsLoading = false;
         CountText = string.Empty;
-        ErrorMessage = null;
+        HasError = false;
+        _errors.ClearPoll(ErrorSource);
         OnPropertyChanged(nameof(IsEmpty));
     }
 
@@ -186,7 +190,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         if (!silent)
         {
             IsLoading = true;
-            ErrorMessage = null;
+            HasError = false;
+            _errors.ClearPoll(ErrorSource);
         }
 
         try
@@ -205,7 +210,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
             Show([.. open, .. withWorkspace]);
             MarkExistingWorkspaces(workspaces);
             _loadedOnce = true;
-            ErrorMessage = null;
+            HasError = false;
+            _errors.ClearPoll(ErrorSource);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -217,7 +223,8 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         {
             if (!silent)
             {
-                ErrorMessage = ex.Message;
+                HasError = true;
+                _errors.ReportPoll(ErrorSource, ex);
                 _all = [];
                 _itemsByKey = [];
                 RebuildRepositoryFilters();
