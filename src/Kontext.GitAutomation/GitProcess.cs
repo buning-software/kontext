@@ -46,7 +46,7 @@ internal sealed class GitProcess(IGitAuthentication authentication) : IGitProces
         }
         catch (Win32Exception ex)
         {
-            throw new GitAutomationException("git was not found. Install Git for Windows and make sure it is on your PATH.", innerException: ex);
+            throw new GitAutomationException(GitFailureDescriber.NotInstalled, innerException: ex);
         }
 
         using (process)

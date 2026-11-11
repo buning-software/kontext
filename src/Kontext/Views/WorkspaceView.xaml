@@ -213,11 +213,6 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                <InfoBar
-                    IsClosable="False"
-                    IsOpen="{x:Bind ViewModel.Workspace.Sidebar.HasError, Mode=OneWay}"
-                    Message="{x:Bind ViewModel.Workspace.Sidebar.ErrorMessage, Mode=OneWay}"
-                    Severity="Error" />
                 <TextBlock
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="No open issues"

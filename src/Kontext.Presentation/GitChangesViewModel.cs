@@ -11,11 +11,13 @@ namespace Kontext.Presentation;
 /// then polls, but only while <see cref="IsActive"/> and a <see cref="WorktreePath"/> are both set. Await continuations
 /// return to the thread that set those properties (the UI thread), so no dispatcher is needed.
 /// </summary>
-public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWorkspaceCommitter committer, TimeProvider clock, GitChangesOptions options) : ObservableObject, IDisposable
+public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWorkspaceCommitter committer, ErrorBarViewModel errors, TimeProvider clock, GitChangesOptions options) : ObservableObject, IDisposable
 {
     public const string CommittingText = "Committing…";
 
     public const string PushingText = "Pushing…";
+
+    private const string PollSource = "git-changes";
 
     private readonly LatestOnly _reloads = new();
     private readonly LatestOnly _selections = new();
@@ -49,8 +51,8 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
     public partial string Summary { get; set; } = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasError), nameof(IsEmpty))]
-    public partial string? ErrorMessage { get; set; }
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    public partial bool HasPollError { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -67,11 +69,6 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
     /// <summary>What the running commit or push is doing, e.g. "Pushing…".</summary>
     [ObservableProperty]
     public partial string BusyText { get; set; } = string.Empty;
-
-    /// <summary>Why the last commit or push failed. Kept apart from <see cref="ErrorMessage"/> so a successful poll does not hide it.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasActionError))]
-    public partial string? ActionError { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
@@ -115,15 +112,11 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         }
     }
 
-    public bool HasActionError => !string.IsNullOrEmpty(ActionError);
-
     public bool HasStatusMessage => !string.IsNullOrEmpty(StatusMessage);
 
     public bool HasChanges => _last.Staged.Count + _last.Unstaged.Count > 0;
 
-    public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
-
-    public bool IsEmpty => HasLoaded && !HasChanges && !HasError;
+    public bool IsEmpty => HasLoaded && !HasChanges && !HasPollError;
 
     public bool HasSelectedChange => _selectedChange is not null;
 
@@ -178,7 +171,8 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
 
             Apply(result);
             UnpushedCount = unpushed;
-            ErrorMessage = null;
+            HasPollError = false;
+            errors.ClearPoll(PollSource);
             HasLoaded = true;
             await LoadSelectedDiffAsync(token);
         }
@@ -191,7 +185,8 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         {
             if (IsCurrent(operation, path))
             {
-                ErrorMessage = ex.Message;
+                HasPollError = true;
+                errors.ReportPoll(PollSource, ex);
             }
         }
     }
@@ -205,12 +200,13 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         RaiseCheckedChanged();
         CommitCommand.NotifyCanExecuteChanged();
         CommitMessage = string.Empty;
-        ActionError = null;
+        errors.ClearAction();
+        errors.ClearPoll(PollSource);
         StatusMessage = null;
         UnpushedCount = 0;
         Rows = [];
         Summary = string.Empty;
-        ErrorMessage = null;
+        HasPollError = false;
         HasLoaded = false;
         Select(null);
         SelectedDiff = null;
@@ -354,7 +350,8 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         {
             if (!token.IsCancellationRequested && ReferenceEquals(change, _selectedChange) && path == WorktreePath)
             {
-                ErrorMessage = ex.Message;
+                HasPollError = true;
+                errors.ReportPoll(PollSource, ex);
             }
         }
     }
@@ -409,7 +406,7 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
 
         IsBusy = true;
         BusyText = busyText;
-        ActionError = null;
+        errors.ClearAction();
         StatusMessage = null;
         var token = _lifetime.Token;
 
@@ -430,7 +427,7 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         {
             if (WorktreePath == path)
             {
-                ActionError = ex.Message;
+                errors.ReportAction(ex);
             }
         }
         finally

@@ -85,4 +85,18 @@ public sealed class GitTabTests : KontextFixture
         Assert.That(App.GitTab.Error, Does.Contain("Push rejected"));
         Assert.That(App.GitTab.PushButton.IsEnabled, Is.True, "the commit is still unpushed");
     }
+
+    [Test]
+    public void TheErrorBarCanBeClosed()
+    {
+        App.GitTab.Check(Map);
+        App.GitTab.TypeMessage("This will fail");
+        Eventually(() => App.GitTab.CommitButton.IsEnabled, "commit is enabled");
+        App.GitTab.CommitButton.Click();
+        Eventually(() => App.GitTab.Error is { Length: > 0 }, "the error is shown");
+
+        App.GitTab.CloseError();
+
+        Eventually(() => App.GitTab.Error is null or { Length: 0 }, "the error is closed");
+    }
 }

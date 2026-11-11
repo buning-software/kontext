@@ -14,10 +14,12 @@ public class IssueSidebarAutoRefreshTests
     private FakeGitHubService _gitHub = null!;
     private FakeExistingWorkspaceFinder _workspaces = null!;
     private IssueSidebarViewModel? _sidebar;
+    private ErrorBarViewModel _errors = new();
 
     [SetUp]
     public void Setup()
     {
+        _errors = new ErrorBarViewModel();
         _clock = new FakeTimeProvider();
         _tracker = new InMemoryIssueWorkTracker();
         _gitHub = new FakeGitHubService { Issues = [Issues.Create(4, "Add notifications", "acme/memento")] };
@@ -37,6 +39,7 @@ public class IssueSidebarAutoRefreshTests
             new InMemoryCollapsedRepositoryStore(),
             new FakeSessionStore(),
             new FakeTranscripts(),
+            _errors,
             _clock,
             new RefreshOptions(interval));
 
@@ -84,7 +87,7 @@ public class IssueSidebarAutoRefreshTests
         await Task.Delay(100);
 
         Assert.That(IssueCount(sidebar), Is.EqualTo(1));
-        Assert.That(sidebar.ErrorMessage, Is.Null);
+        Assert.That(_errors.Message, Is.Null);
     }
 
     [Test]

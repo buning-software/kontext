@@ -45,7 +45,7 @@ internal sealed class WorkspaceCommitter(IGitProcess git) : IWorkspaceCommitter
         var result = await git.RunAsync(worktreePath, ["push", "--set-upstream", "origin", "HEAD"], cancellationToken);
         if (!result.Succeeded)
         {
-            throw new GitAutomationException(DescribePushFailure(result), result.ExitCode, result.StandardError);
+            throw GitProcessExtensions.Failure(result);
         }
     }
 
@@ -57,24 +57,4 @@ internal sealed class WorkspaceCommitter(IGitProcess git) : IWorkspaceCommitter
         var result = await git.RunAsync(worktreePath, ["--no-optional-locks", "rev-list", "--count", "HEAD", "--not", "--remotes"], cancellationToken);
         return result.Succeeded && int.TryParse(result.Output, NumberStyles.None, CultureInfo.InvariantCulture, out var count) ? count : 0;
     }
-
-    private static string DescribePushFailure(GitResult result)
-    {
-        var error = result.StandardError;
-        if (Contains(error, "non-fast-forward") || Contains(error, "[rejected]") || Contains(error, "fetch first"))
-        {
-            return "Push rejected: the remote branch has commits you do not have. Pull or rebase, then push again.";
-        }
-
-        if (Contains(error, "Authentication failed") || Contains(error, "could not read Username") || Contains(error, "Permission denied")
-            || Contains(error, "returned error: 403") || Contains(error, "returned error: 401"))
-        {
-            return "Push failed: authentication failed. Sign in to GitHub again and retry.";
-        }
-
-        var detail = string.IsNullOrWhiteSpace(error) ? result.StandardOutput.Trim() : error.Trim();
-        return $"Push failed: {detail}";
-    }
-
-    private static bool Contains(string text, string value) => text.Contains(value, StringComparison.OrdinalIgnoreCase);
 }

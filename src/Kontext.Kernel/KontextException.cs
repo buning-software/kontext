@@ -15,4 +15,7 @@ public class KontextException : Exception
         : base(message, innerException)
     {
     }
+
+    /// <summary>The raw output behind <see cref="Exception.Message"/>, for a details view. Null when there is none.</summary>
+    public virtual string? Details => null;
 }

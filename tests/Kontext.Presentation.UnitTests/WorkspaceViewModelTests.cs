@@ -19,10 +19,12 @@ public class WorkspaceViewModelTests
     private InMemoryIssueSessionRegistry _registry = null!;
     private FakeGeneralSessionCoordinator _generalCoordinator = null!;
     private GeneralSessionViewModel _general = null!;
+    private ErrorBarViewModel Errors { get; set; } = null!;
 
     [SetUp]
     public async Task CreateWorkspace()
     {
+        Errors = new ErrorBarViewModel();
         _tracker = new InMemoryIssueWorkTracker();
         _coordinator = new FakeCoordinator();
         _clock = new FakeTimeProvider();
@@ -33,12 +35,12 @@ public class WorkspaceViewModelTests
             Issues = [Issues.Create(4, "Add notifications", "acme/memento"), Issues.Create(3, "Bring project under UI test", "acme/memento")],
         };
 
-        _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), new FakeTranscripts(), _clock);
+        _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), new FakeTranscripts(), Errors, _clock);
         _registry = new InMemoryIssueSessionRegistry();
-        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), _registry, _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), _clock, GitChangesOptions.Default));
+        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), _registry, _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), Errors, _clock, GitChangesOptions.Default));
         _generalCoordinator = new FakeGeneralSessionCoordinator();
         _general = new GeneralSessionViewModel(_generalCoordinator);
-        _workspace = new WorkspaceViewModel(_sidebar, _detail, _general, _autoStart);
+        _workspace = new WorkspaceViewModel(_sidebar, _detail, _general, _autoStart, Errors);
 
         await _sidebar.RefreshCommand.ExecuteAsync(null);
     }

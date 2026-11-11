@@ -160,7 +160,7 @@ public class WorkspaceCommitterIntegrationTests
         await _committer.CommitAsync(_repo, [await ChangeOf("README.md")], "Change readme");
         await Git("remote", "set-url", "origin", _temp.Combine("missing.git"));
 
-        Assert.That(() => _committer.PushAsync(_repo), Throws.TypeOf<GitAutomationException>().With.Message.StartsWith("Push failed"));
+        Assert.That(() => _committer.PushAsync(_repo), Throws.TypeOf<GitAutomationException>().With.Message.EqualTo("No remote or upstream is configured for this branch."));
         Assert.That(await _committer.CountUnpushedAsync(_repo), Is.EqualTo(1));
     }
 

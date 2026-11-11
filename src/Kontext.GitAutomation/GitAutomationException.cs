@@ -14,4 +14,6 @@ public class GitAutomationException : KontextException
     public int ExitCode { get; }
 
     public string? StandardError { get; }
+
+    public override string? Details => string.IsNullOrWhiteSpace(StandardError) ? null : StandardError.Trim();
 }

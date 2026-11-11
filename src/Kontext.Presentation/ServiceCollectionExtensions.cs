@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWorkspaceIssues, WorkspaceIssues>();
         services.AddSingleton<SelectionAutoStart>();
 
+        services.AddSingleton<ErrorBarViewModel>();
         services.AddTransient<IssueSidebarViewModel>();
         services.AddSingleton(GitChangesOptions.Default);
 

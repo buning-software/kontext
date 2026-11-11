@@ -11,11 +11,12 @@ public sealed partial class WorkspaceViewModel : ObservableObject
     private readonly SidebarSeparator _separatorAbove = new();
     private readonly SidebarSeparator _separatorBelow = new();
 
-    public WorkspaceViewModel(IssueSidebarViewModel sidebar, IssueDetailViewModel detail, GeneralSessionViewModel general, SelectionAutoStart autoStart)
+    public WorkspaceViewModel(IssueSidebarViewModel sidebar, IssueDetailViewModel detail, GeneralSessionViewModel general, SelectionAutoStart autoStart, ErrorBarViewModel errors)
     {
         Sidebar = sidebar;
         Detail = detail;
         General = general;
+        Errors = errors;
         _autoStart = autoStart;
 
         sidebar.PropertyChanged += OnSidebarPropertyChanged;
@@ -29,6 +30,9 @@ public sealed partial class WorkspaceViewModel : ObservableObject
     public IssueDetailViewModel Detail { get; }
 
     public GeneralSessionViewModel General { get; }
+
+    /// <summary>The one error bar across the bottom of the window.</summary>
+    public ErrorBarViewModel Errors { get; }
 
     /// <summary>What the sidebar menu binds to: a separator, the fixed general Claude entry, a separator, then a group for every repository.</summary>
     public ObservableCollection<object> MenuItems { get; } = [];

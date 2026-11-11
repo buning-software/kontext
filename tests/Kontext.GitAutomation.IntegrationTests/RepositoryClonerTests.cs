@@ -89,11 +89,11 @@ public class RepositoryClonerTests
     }
 
     [Test]
-    public void ReportsAFailedCloneWithGitsMessage()
+    public void ReportsAFailedCloneWithGitsOutputAsDetails()
     {
         _git.Result = new GitResult(128, string.Empty, "remote: Repository not found.");
 
-        Assert.That(async () => await _cloner.CloneAsync(Acme), Throws.TypeOf<GitAutomationException>().With.Message.Contains("Repository not found"));
+        Assert.That(async () => await _cloner.CloneAsync(Acme), Throws.TypeOf<GitAutomationException>().With.Property("Details").Contains("Repository not found"));
     }
 
     private sealed class SlowCloningGit : IGitProcess
