@@ -15,7 +15,7 @@ internal sealed class UiTestGitHubService : IGitHubService
 
     public Task<IReadOnlyList<GitHubIssue>> GetIssuesAsync(RepositoryRef? repository = null, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<GitHubIssue>>(
-            repository is null ? UiTestGitHubData.Issues : [.. UiTestGitHubData.Issues.Where(issue => Same(issue.Repository, repository))]);
+            repository is null ? UiTestGitHubData.Issues : (GitHubIssue[])[.. UiTestGitHubData.Issues.Where(issue => Same(issue.Repository, repository))]);
 
     public Task<GitHubIssue> GetIssueAsync(RepositoryRef repository, int number, CancellationToken cancellationToken = default) =>
         UiTestGitHubData.Issues.FirstOrDefault(issue => Same(issue.Repository, repository) && issue.Number == number) is { } issue

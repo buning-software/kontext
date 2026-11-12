@@ -11,7 +11,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(new HttpClient());
         services.AddSingleton<GitHubFormPoster>();
         services.AddSingleton<IGitHubDeviceLogin, GitHubDeviceLogin>();
+        services.AddSingleton<GitHubClients>();
         services.AddSingleton<IGitHubService, GitHubService>();
+        services.AddSingleton<IIssueBranchLinks, GitHubIssueBranchLinks>();
         return services;
     }
 }

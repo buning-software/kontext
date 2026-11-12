@@ -55,7 +55,7 @@ public class DependencyRuleTests
         var text = File.ReadAllText(path);
 
         Assert.That(text, Does.Not.Contain("UseWinUI").And.Not.Contain("windows10").And.Not.Contain("WindowsAppSDK"),
-            $"{project} must stay a plain net10.0 project; WinUI code belongs in Kontext.");
+            $"{project} must stay a plain net11.0 project; WinUI code belongs in Kontext.");
     }
     [Test]
     public void NothingReferencesTheUi()

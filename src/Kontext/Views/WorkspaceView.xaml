@@ -225,6 +225,11 @@
         </NavigationView.PaneCustomContent>
 
         <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
             <StackPanel
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
@@ -266,6 +271,50 @@
             <views:SettingsView
                 ViewModel="{x:Bind ViewModel}"
                 Visibility="{x:Bind ViewModel.Workspace.IsSettingsOpen, Mode=OneWay}" />
+
+            <InfoBar
+                Grid.Row="1"
+                AutomationProperties.AutomationId="ErrorBar"
+                AutomationProperties.Name="{x:Bind ViewModel.Workspace.Errors.Message, Mode=OneWay}"
+                IsClosable="True"
+                IsOpen="{x:Bind ViewModel.Workspace.Errors.IsOpen, Mode=TwoWay}"
+                Severity="Error">
+                <StackPanel Margin="0,0,0,12" Spacing="8">
+                    <TextBlock
+                        AutomationProperties.AutomationId="ErrorMessage"
+                        IsTextSelectionEnabled="True"
+                        Text="{x:Bind ViewModel.Workspace.Errors.Message, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                    <ToggleButton
+                        Visibility="{x:Bind ViewModel.Workspace.Errors.HasDetails, Mode=OneWay}"
+                        AutomationProperties.AutomationId="ErrorDetailsToggle"
+                        Content="Details"
+                        IsChecked="{x:Bind ViewModel.Workspace.Errors.IsDetailsOpen, Mode=TwoWay}" />
+                    <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.Workspace.Errors.IsDetailsOpen, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox
+                            MaxHeight="160"
+                            AcceptsReturn="True"
+                            AutomationProperties.AutomationId="ErrorDetails"
+                            AutomationProperties.Name="Error details"
+                            FontFamily="Consolas"
+                            IsReadOnly="True"
+                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            Text="{x:Bind ViewModel.Workspace.Errors.Details, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                        <Button
+                            Grid.Column="1"
+                            VerticalAlignment="Top"
+                            AutomationProperties.AutomationId="ErrorDetailsCopy"
+                            Click="CopyDetails_Click"
+                            Content="Copy" />
+                    </Grid>
+                </StackPanel>
+            </InfoBar>
         </Grid>
     </NavigationView>
 </UserControl>

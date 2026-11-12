@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBranchNamer, BranchNamer>();
         services.AddSingleton<IWorktreePathProvider, WorktreePathProvider>();
         services.AddSingleton<IWorkspaceCommitter, WorkspaceCommitter>();
+        services.AddSingleton<IWorkspaceBranches, WorkspaceBranches>();
         services.AddSingleton<IGitWorktreeService, GitWorktreeService>();
         services.AddSingleton<IWorkspaceChanges, WorkspaceChanges>();
         services.AddSingleton<IGitRepositoryInspector, GitRepositoryInspector>();

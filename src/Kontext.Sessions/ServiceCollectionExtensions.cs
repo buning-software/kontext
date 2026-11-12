@@ -14,10 +14,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISessionStore, JsonSessionStore>();
         services.AddSingleton<IHiddenRepositoryStore, JsonHiddenRepositoryStore>();
         services.AddSingleton<ICollapsedRepositoryStore, JsonCollapsedRepositoryStore>();
+        services.AddSingleton<IAutoCleanupSetting, JsonAutoCleanupSetting>();
         services.AddSingleton<IIssueSessionRegistry,IssueSessionRegistry>();
         services.AddSingleton<IIssueWorkTracker, IssueWorkTracker>();
         services.AddSingleton<IIssueSessionCoordinator, IssueSessionCoordinator>();
         services.AddSingleton<IIssueSessionClearer, IssueSessionClearer>();
+        services.AddSingleton<IIssueBranchLinker, IssueBranchLinker>();
         services.AddSingleton<IGeneralSessionCoordinator, GeneralSessionCoordinator>();
         return services;
     }

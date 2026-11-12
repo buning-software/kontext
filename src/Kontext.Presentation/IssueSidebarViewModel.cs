@@ -19,6 +19,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
     private readonly ICollapsedRepositoryStore _collapsedRepositories;
     private readonly ISessionStore _sessions;
     private readonly IClaudeTranscripts _transcripts;
+    private readonly AutoCleanup _autoCleanup;
     private readonly ErrorBarViewModel _errors;
     private readonly TimeProvider _clock;
     private readonly RefreshOptions _refreshOptions;
@@ -43,6 +44,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         ICollapsedRepositoryStore collapsedRepositories,
         ISessionStore sessions,
         IClaudeTranscripts transcripts,
+        AutoCleanup autoCleanup,
         ErrorBarViewModel errors,
         TimeProvider clock,
         RefreshOptions? refreshOptions = null)
@@ -55,6 +57,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
         _collapsedRepositories = collapsedRepositories;
         _sessions = sessions;
         _transcripts = transcripts;
+        _autoCleanup = autoCleanup;
         _errors = errors;
         _clock = clock;
         _refreshOptions = refreshOptions ?? new RefreshOptions(TimeSpan.Zero);
@@ -209,6 +212,7 @@ public sealed partial class IssueSidebarViewModel : ObservableObject, IDisposabl
 
             Show([.. open, .. withWorkspace]);
             MarkExistingWorkspaces(workspaces);
+            _ = _autoCleanup.RunAsync([.. _all], SelectedItem?.Key);
             _loadedOnce = true;
             HasError = false;
             _errors.ClearPoll(ErrorSource);

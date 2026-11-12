@@ -16,6 +16,12 @@ public sealed record GitHubServer(string Host, string? ClientId = null)
             ? new Uri($"https://api.{Host}/")
             : new Uri($"https://{Host}/api/v3/");
 
+    public Uri GraphQlUri => GitHubHosts.IsDefault(Host)
+        ? new Uri("https://api.github.com/graphql")
+        : Host.EndsWith(".ghe.com", StringComparison.OrdinalIgnoreCase)
+            ? new Uri($"https://api.{Host}/graphql")
+            : new Uri($"https://{Host}/api/graphql");
+
     public static bool TryCreate(string? address, out GitHubServer? server, out string? error)
     {
         server = null;

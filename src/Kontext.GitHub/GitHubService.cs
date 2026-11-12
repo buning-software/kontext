@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Kontext.Contracts;
 using Kontext.Domain;
 using Kontext.Kernel;
@@ -6,15 +5,13 @@ using Octokit;
 
 namespace Kontext.GitHub;
 
-internal sealed class GitHubService : IGitHubService
+internal sealed class GitHubService(GitHubClients clients) : IGitHubService
 {
     private const int PageSize = 100;
 
     private const int AllRepositoriesPageCount = 10;
 
     private static readonly ProductHeaderValue ProductHeader = new("Kontext");
-
-    private readonly ConcurrentDictionary<string, GitHubClient> _clients = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<GitHubUser> AuthenticateAsync(string host, string accessToken, CancellationToken cancellationToken = default)
     {
@@ -25,20 +22,20 @@ internal sealed class GitHubService : IGitHubService
 
         var user = await OctokitCall.RunAsync(() => candidate.User.Current(), cancellationToken);
 
-        _clients[host] = candidate;
+        clients.Set(host, candidate);
         return new GitHubUser(user.Login, user.Name, new Uri(user.HtmlUrl), host);
     }
 
-    public void SignOut(string host) => _clients.TryRemove(host, out _);
+    public void SignOut(string host) => clients.Remove(host);
 
     public async Task<IReadOnlyList<GitHubIssue>> GetIssuesAsync(RepositoryRef? repository = null, CancellationToken cancellationToken = default)
     {
         if (repository is not null)
         {
-            return await GetRepositoryIssuesAsync(ClientFor(repository.Host), repository, cancellationToken);
+            return await GetRepositoryIssuesAsync(clients.For(repository.Host), repository, cancellationToken);
         }
 
-        var signedIn = _clients.ToArray();
+        var signedIn = clients.All();
         if (signedIn.Length == 0)
         {
             return [];
@@ -60,7 +57,7 @@ internal sealed class GitHubService : IGitHubService
     {
         ArgumentNullException.ThrowIfNull(repository);
 
-        var client = ClientFor(repository.Host);
+        var client = clients.For(repository.Host);
         var issue = await OctokitCall.RunAsync(() => client.Issue.Get(repository.Owner, repository.Name, number), cancellationToken);
 
         return IssueMapper.Map(issue, repository, repository.Host)
@@ -76,9 +73,6 @@ internal sealed class GitHubService : IGitHubService
         client.Credentials = new Credentials(accessToken);
         return client;
     }
-
-    private GitHubClient ClientFor(string host) =>
-        _clients.TryGetValue(host, out var client) ? client : throw new GitHubException($"You are not signed in to {host}.");
 
     private static async Task<(IReadOnlyList<GitHubIssue> Issues, KontextException? Failure)> TryGetAllIssuesAsync(GitHubClient client, string host, CancellationToken cancellationToken)
     {

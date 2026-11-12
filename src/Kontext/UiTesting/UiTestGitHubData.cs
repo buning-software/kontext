@@ -10,7 +10,7 @@ internal static class UiTestGitHubData
     public static GitHubUser User { get; } = new("ui-tester", "UI Tester", new Uri("https://github.com/ui-tester"));
 
     public static IReadOnlyList<GitHubIssue> Issues { get; } =
-    [
+    (GitHubIssue[])[
         Create("acme", "atlas", 12, "Draw the coastline", "2025-02-24T10:00:00Z"),
         Create("acme", "atlas", 11, "Add a legend", "2025-02-14T10:00:00Z"),
         Create("acme", "beacon", 7, "Blink on new mail", "2025-02-23T10:00:00Z"),

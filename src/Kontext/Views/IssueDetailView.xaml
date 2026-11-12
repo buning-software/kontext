@@ -207,6 +207,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            IsTextSelectionEnabled="True"
                             Text="{x:Bind ViewModel.TerminalPlaceholder, Mode=OneWay}"
                             TextWrapping="Wrap"
                             Visibility="{x:Bind ViewModel.HasNoSession, Mode=OneWay}" />
@@ -221,14 +222,23 @@
                         BorderThickness="1"
                         CornerRadius="8"
                         Visibility="{x:Bind ViewModel.HasEnded, Mode=OneWay}">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <TextBlock VerticalAlignment="Center" Text="{x:Bind ViewModel.EndedText, Mode=OneWay}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                IsTextSelectionEnabled="True"
+                                Text="{x:Bind ViewModel.EndedText, Mode=OneWay}"
+                                TextWrapping="Wrap" />
                             <HyperlinkButton
+                                Grid.Column="1"
                                 VerticalAlignment="Center"
                                 AutomationProperties.Name="Resume session"
                                 Command="{x:Bind ViewModel.ResumeCommand}"
                                 Content="Resume" />
-                        </StackPanel>
+                        </Grid>
                     </Border>
                 </Grid>
 

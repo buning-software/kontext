@@ -10,6 +10,22 @@ public class GitFailureDescriberTests
     public void NoOrBadTokenIsExplainedAsAnAuthenticationFailure(string stderr)
         => Assert.That(GitFailureDescriber.Describe(stderr), Is.EqualTo("Authentication failed. Sign in to GitHub again and retry."));
 
+    [Test]
+    public void AnOrganizationThatEnforcesSingleSignOnAsksToAuthorizeTheTokenForSso()
+    {
+        const string stderr = "remote: The 'Acme' organization has enabled or enforced SAML SSO.\nremote: To access this repository, visit https://acme.ghe.com/enterprises/acme/sso?authorization_request=ABC123 and try your request again.\nfatal: unable to access 'https://acme.ghe.com/Acme/app.git/': The requested URL returned error: 403";
+
+        var message = GitFailureDescriber.Describe(stderr);
+
+        Assert.That(message, Does.StartWith("The Acme organization requires single sign-on (SAML SSO)"));
+        Assert.That(message, Does.Contain("Configure SSO"));
+        Assert.That(message, Does.EndWith("Or open https://acme.ghe.com/enterprises/acme/sso?authorization_request=ABC123"));
+    }
+
+    [Test]
+    public void ASingleSignOnFailureWithoutDetailsStillNamesSso()
+        => Assert.That(GitFailureDescriber.Describe("remote: SAML SSO is enforced.\nfatal: The requested URL returned error: 403"), Does.StartWith("This organization requires single sign-on (SAML SSO)").And.Not.Contain("Or open"));
+
     [TestCase(" ! [rejected]        HEAD -> feature (non-fast-forward)\nerror: failed to push some refs")]
     [TestCase(" ! [rejected]        HEAD -> feature (fetch first)")]
     public void ARemoteWithNewerCommitsIsExplainedAsARejectedPush(string stderr)

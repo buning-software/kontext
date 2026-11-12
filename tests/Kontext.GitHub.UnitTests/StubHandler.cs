@@ -35,7 +35,7 @@ internal sealed class StubHandler : HttpMessageHandler
 
         lock (_gate)
         {
-            _requests.Add(new RecordedRequest(request.Method, request.RequestUri!.ToString(), request.Headers.Accept.ToString(), form));
+            _requests.Add(new RecordedRequest(request.Method, request.RequestUri!.ToString(), request.Headers.Accept.ToString(), form, content, request.Headers.Authorization?.ToString()));
         }
 
         if (_responses.Count == 0)

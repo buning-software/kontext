@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Kontext.Presentation;
 using Kontext.Terminal;
 using Microsoft.UI.Xaml.Controls;
-using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 
 namespace Kontext.Views;
@@ -22,19 +21,6 @@ public sealed partial class ShellPage : Page
     public ShellViewModel ViewModel { get; }
 
     public TerminalControlHost ControlHost { get; }
-
-    private void CopyDetails_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (ViewModel.Workspace.Errors.Details is not { Length: > 0 } details)
-        {
-            return;
-        }
-
-        var package = new DataPackage();
-        package.SetText(details);
-        Clipboard.SetContent(package);
-        Clipboard.Flush();
-    }
 
     private async void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

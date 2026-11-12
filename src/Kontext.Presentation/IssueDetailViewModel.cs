@@ -118,8 +118,9 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
 
     public bool HasEnded => Item is { } item && (item.State.SessionEnded || item.Status == IssueWorkStatus.Failed);
 
+    /// <summary>The line next to Resume. Without a session the reason is already the terminal placeholder, so it is not repeated here.</summary>
     public string EndedText => Item?.Status == IssueWorkStatus.Failed
-        ? StatusMessage ?? "The session failed."
+        ? HasSession ? StatusMessage ?? "The session failed." : "Claude could not be started."
         : "Session ended.";
 
     public string TerminalPlaceholder => Item?.Status switch
@@ -236,6 +237,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
             return;
         }
 
+        GitChanges.Issue = Item?.Issue;
         GitChanges.WorktreePath = WorktreePath;
         GitChanges.IsActive = ShowGitTab;
     }

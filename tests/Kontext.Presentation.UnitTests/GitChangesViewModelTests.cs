@@ -12,6 +12,7 @@ public class GitChangesViewModelTests
 
     private FakeWorkspaceChanges _fake = null!;
     private FakeWorkspaceCommitter _committer = null!;
+    private FakeIssueBranchLinker _linker = null!;
     private FakeTimeProvider _clock = null!;
     private GitChangesViewModel _vm = null!;
 
@@ -22,9 +23,10 @@ public class GitChangesViewModelTests
     {
         _fake = new FakeWorkspaceChanges();
         _committer = new FakeWorkspaceCommitter();
+        _linker = new FakeIssueBranchLinker();
         Errors = new ErrorBarViewModel();
         _clock = new FakeTimeProvider();
-        _vm = new GitChangesViewModel(_fake, _committer, Errors, _clock, new GitChangesOptions(Interval));
+        _vm = new GitChangesViewModel(_fake, _committer, _linker, Errors, _clock, new GitChangesOptions(Interval));
     }
 
     [TearDown]
@@ -475,6 +477,107 @@ public class GitChangesViewModelTests
         _fake.Changes = Unstaged(Change("a.cs"), Change("b.cs"));
         Activate();
         await WaitForLoaded();
+    }
+
+    [Test]
+    public async Task LinksTheBranchToTheIssueAfterACommit()
+    {
+        var issue = Issues.Create(7, "Some work", "acme/memento");
+        _vm.Issue = issue;
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => _vm.StatusMessage is not null, "the commit to finish");
+
+        Assert.That(_linker.Links, Is.EqualTo(Expect.Seq((issue, Worktree))));
+        Assert.That(Errors.IsOpen, Is.False);
+    }
+
+    [Test]
+    public async Task KeepsTheCommitButWarnsWhenTheBranchCannotBeLinked()
+    {
+        _vm.Issue = Issues.Create(7, "Some work", "acme/memento");
+        _linker.FailWith = new TestKontextException("no permission");
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => Errors.IsOpen, "the warning");
+
+        Assert.That(_committer.Commits, Has.Count.EqualTo(1));
+        Assert.That(_vm.StatusMessage, Is.EqualTo("Committed 1 file."));
+        Assert.That(Errors.Message, Does.Contain("could not be linked").And.Contain("no permission"));
+    }
+
+    [Test]
+    public async Task CommitsWithoutLinkingWhenThereIsNoIssue()
+    {
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => _vm.StatusMessage is not null, "the commit to finish");
+
+        Assert.That(_committer.Commits, Has.Count.EqualTo(1));
+        Assert.That(_linker.Links, Is.Empty);
+    }
+
+    [Test]
+    public async Task LinksTheIssueTheCommitWasMadeForEvenIfAnotherIssueIsOpenedMeanwhile()
+    {
+        var issue = Issues.Create(7, "Some work", "acme/memento");
+        _vm.Issue = issue;
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+        _committer.Gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => _committer.Commits.Count == 1, "the commit to start");
+        _vm.Issue = Issues.Create(8, "Other work", "acme/memento");
+        _committer.Gate.SetResult(true);
+        await WaitFor(() => _linker.Links.Count == 1, "the link");
+
+        Assert.That(_linker.Links.Single(), Is.EqualTo((issue, Worktree)));
+    }
+
+    [Test]
+    public async Task DoesNotWarnAboutTheLinkOnceAnotherWorktreeIsShown()
+    {
+        _vm.Issue = Issues.Create(7, "Some work", "acme/memento");
+        _linker.FailWith = new TestKontextException("no permission");
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+        _committer.Gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => _committer.Commits.Count == 1, "the commit to start");
+        _vm.WorktreePath = @"C:\wt\two";
+        _committer.Gate.SetResult(true);
+        await WaitFor(() => !_vm.CommitCommand.IsRunning, "the commit to finish");
+        await Settle();
+
+        Assert.That(Errors.IsOpen, Is.False);
+    }
+
+    [Test]
+    public async Task DoesNotLinkAFailedCommit()
+    {
+        _vm.Issue = Issues.Create(7, "Some work", "acme/memento");
+        _committer.CommitFailure = new TestKontextException("hook rejected");
+        await LoadTwoFiles();
+        FileRow("a.cs").IsChecked = true;
+        _vm.CommitMessage = "Fix a";
+
+        _vm.CommitCommand.Execute(null);
+        await WaitFor(() => Errors.IsOpen, "the commit error");
+
+        Assert.That(_linker.Links, Is.Empty);
     }
 
     [Test]
