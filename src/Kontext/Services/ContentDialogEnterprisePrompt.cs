@@ -24,7 +24,7 @@ internal sealed class ContentDialogEnterprisePrompt(XamlRootProvider root) : IEn
         var hint = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
-            Text = "Create a personal access token on your GitHub Enterprise server (Settings, Developer settings, Personal access tokens) with the repo scope, then paste it here. Kontext stores it in the Windows Credential Locker.",
+            Text = "Create a personal access token on your GitHub Enterprise server (Settings, Developer settings, Personal access tokens) with the repo and workflow scopes, then paste it here. Kontext stores it in the Windows Credential Locker.",
             Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
         };
 

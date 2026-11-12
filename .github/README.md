@@ -64,7 +64,7 @@ Kontext lets you work on all your repositories' issues at once and leave Claude 
 
 ### Built With
 
-* [.NET 10](https://dotnet.microsoft.com/) and [WinUI 3 / Windows App SDK](https://learn.microsoft.com/windows/apps/windows-app-sdk/)
+* [.NET 11](https://dotnet.microsoft.com/) and [WinUI 3 / Windows App SDK](https://learn.microsoft.com/windows/apps/windows-app-sdk/)
 * [CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/) and `Microsoft.Extensions.Hosting` (dependency injection)
 * [CommunityToolkit Labs MarkdownTextBlock](https://github.com/CommunityToolkit/Labs-Windows) for the issue descriptions
 * [Octokit](https://github.com/octokit/octokit.net) for GitHub
@@ -81,7 +81,7 @@ Before beginning, ensure that your development environment is properly configure
 ### Requirements
 
 * Windows 10 version 1809 or later (Windows 11 recommended)
-* [.NET 10 SDK](https://dotnet.microsoft.com/download)
+* [.NET 11 SDK](https://dotnet.microsoft.com/download)
 * [Git for Windows](https://git-scm.com/download/win) on your `PATH`
 * The [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude`) on your `PATH`
 * A GitHub account; you sign in with it on first start (GitHub device flow) and Kontext stores the resulting token in Windows Credential Locker
@@ -94,7 +94,7 @@ Sign-in needs a GitHub OAuth App with Device Flow enabled. For local development
 
 ```powershell
 dotnet build Kontext.slnx -c Release
-.\src\Kontext\bin\Release\net10.0-windows10.0.19041.0\win-x64\Kontext.exe
+.\src\Kontext\bin\Release\net11.0-windows10.0.19041.0\win-x64\Kontext.exe
 ```
 
 Stop a running instance before building again, because it locks the build output. Kontext keeps its clones, worktrees and state under `%LOCALAPPDATA%\Kontext`; set `KONTEXT_DATA_DIR` to use another folder, for example when trying things out.

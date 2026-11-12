@@ -2,6 +2,7 @@ using Kontext.Presentation;
 using Kontext.Terminal;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace Kontext.Views;
 
@@ -20,6 +21,19 @@ public sealed partial class WorkspaceView : UserControl
         new PropertyMetadata(null, (view, _) => ((WorkspaceView)view).Bindings?.Update()));
 
     public WorkspaceView() => InitializeComponent();
+
+    private void CopyDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.Workspace.Errors.Details is not { Length: > 0 } details)
+        {
+            return;
+        }
+
+        var package = new DataPackage();
+        package.SetText(details);
+        Clipboard.SetContent(package);
+        Clipboard.Flush();
+    }
 
     public ShellViewModel? ViewModel
     {

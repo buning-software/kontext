@@ -12,12 +12,29 @@ public sealed partial class ShellViewModel(
     IGitHubTokenStore tokenStore,
     IEnterpriseServerPrompt enterprisePrompt,
     IStartupRegistration startup,
+    IAutoCleanupSetting autoCleanup,
     WorkspaceViewModel workspace) : ObservableObject
 {
     public WorkspaceViewModel Workspace { get; } = workspace;
 
     [ObservableProperty]
     public partial bool LaunchOnStartup { get; set; }
+
+    /// <summary>Whether the sessions of closed issues are cleared in the background. It is saved as soon as it changes.</summary>
+    public bool CleanUpAutomatically
+    {
+        get => autoCleanup.IsEnabled;
+        set
+        {
+            if (value == autoCleanup.IsEnabled)
+            {
+                return;
+            }
+
+            autoCleanup.IsEnabled = value;
+            OnPropertyChanged();
+        }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSignedIn), nameof(IsSignedOut), nameof(ShowSignIn), nameof(SignedInText), nameof(GitHubStatusText), nameof(HasGitHubAccount), nameof(HasNoGitHubAccount))]

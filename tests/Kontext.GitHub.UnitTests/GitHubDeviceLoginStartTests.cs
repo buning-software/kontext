@@ -27,7 +27,7 @@ public class GitHubDeviceLoginStartTests : GitHubDeviceLoginTestBase
         Assert.That(request.Method, Is.EqualTo(HttpMethod.Post));
         Assert.That(request.Url, Is.EqualTo("https://github.com/login/device/code"));
         Assert.That(request.Accept, Does.Contain("application/json"));
-        Assert.That(request.Form, Is.EquivalentTo(new Dictionary<string, string> { ["client_id"] = ClientId, ["scope"] = "repo" }));
+        Assert.That(request.Form, Is.EquivalentTo(new Dictionary<string, string> { ["client_id"] = ClientId, ["scope"] = "repo workflow" }));
     }
 
     [Test]

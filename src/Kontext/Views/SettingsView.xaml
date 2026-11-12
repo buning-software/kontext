@@ -175,6 +175,35 @@
                                 Toggled="OnLaunchOnStartupToggled" />
                         </Grid>
                     </Border>
+
+                    <Border Style="{StaticResource SettingsCardStyle}">
+                        <Grid VerticalAlignment="Center" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <FontIcon
+                                AutomationProperties.AccessibilityView="Raw"
+                                FontSize="20"
+                                Glyph="&#xE74D;" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Clean up closed issues automatically" />
+                                <TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Clear the session, worktree and branch of a closed issue in the background, unless it has uncommitted changes or unpushed commits" />
+                            </StackPanel>
+                            <ToggleSwitch
+                                Grid.Column="2"
+                                MinWidth="0"
+                                Margin="0,0,-12,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="Clean up closed issues automatically"
+                                IsOn="{x:Bind ViewModel.CleanUpAutomatically, Mode=TwoWay}"
+                                OffContent="{x:Null}"
+                                OnContent="{x:Null}" />
+                        </Grid>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Spacing="4">

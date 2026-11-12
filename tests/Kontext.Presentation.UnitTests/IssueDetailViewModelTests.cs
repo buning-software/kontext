@@ -33,7 +33,7 @@ public class IssueDetailViewModelTests
         _clock = new FakeTimeProvider();
         _autoStart = new SelectionAutoStart(_coordinator, _tracker, new InMemoryIssueSessionRegistry(), _clock, new AutoStartOptions(TimeSpan.FromSeconds(1)));
         _workspaceChanges = new FakeWorkspaceChanges();
-        var gitChanges = new GitChangesViewModel(_workspaceChanges, new FakeWorkspaceCommitter(), new ErrorBarViewModel(), _clock, new GitChangesOptions(TimeSpan.FromSeconds(3)));
+        var gitChanges = new GitChangesViewModel(_workspaceChanges, new FakeWorkspaceCommitter(), new FakeIssueBranchLinker(), new ErrorBarViewModel(), _clock, new GitChangesOptions(TimeSpan.FromSeconds(3)));
         _detail = new IssueDetailViewModel(_coordinator, _clearer, _confirmation, _opener, _registry, _autoStart, gitChanges);
     }
 
@@ -46,6 +46,18 @@ public class IssueDetailViewModelTests
 
     private static IssueItemViewModel Item(IssueWorkStatus status = IssueWorkStatus.NotStarted, GitHubIssue? issue = null, string? branch = null, string? path = null, string? message = null, bool sessionEnded = false)
         => new(issue ?? Issues.Create(4, "Add notifications", "acme/memento", labels: ["enhancement", "ui"]), new IssueWorkState(status, branch, path, message, sessionEnded), Now);
+
+    [Test]
+    public void TellsTheGitTabWhichIssueItCommitsFor()
+    {
+        var issue = Issues.Create(9, "Link branches", "acme/memento");
+
+        _detail.Item = Item(issue: issue, path: @"C:\wt\nine");
+        Assert.That(_detail.GitChanges.Issue, Is.SameAs(issue));
+
+        _detail.Item = null;
+        Assert.That(_detail.GitChanges.Issue, Is.Null);
+    }
 
     [Test]
     public void ShowsNothingUntilAnIssueIsSelected()
@@ -354,8 +366,19 @@ public class IssueDetailViewModelTests
         _detail.Item = Item(IssueWorkStatus.Done, sessionEnded: true);
         Assert.That(_detail.EndedText, Is.EqualTo("Session ended."));
 
-        _detail.Item = Item(IssueWorkStatus.Failed, message: "Claude exited with code 3.");
+        var failed = Item(IssueWorkStatus.Failed, message: "Claude exited with code 3.");
+        _registry.Register(failed.Key, new FakeTerminalSession(TerminalSessionId.New()));
+        _detail.Item = failed;
         Assert.That(_detail.EndedText, Is.EqualTo("Claude exited with code 3."));
+    }
+
+    [Test]
+    public void AFailedStartShowsItsReasonOnceInThePlaceholderNotAgainNextToResume()
+    {
+        _detail.Item = Item(IssueWorkStatus.Failed, message: "The MarYor organization requires single sign-on.");
+
+        Assert.That(_detail.TerminalPlaceholder, Is.EqualTo("The MarYor organization requires single sign-on."));
+        Assert.That(_detail.EndedText, Is.EqualTo("Claude could not be started."));
     }
 
     [Test]

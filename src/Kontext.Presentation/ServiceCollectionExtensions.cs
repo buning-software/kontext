@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(RefreshOptions.Default);
         services.AddSingleton<IWorkspaceIssues, WorkspaceIssues>();
         services.AddSingleton<SelectionAutoStart>();
+        services.AddSingleton<AutoCleanup>();
 
         services.AddSingleton<ErrorBarViewModel>();
         services.AddTransient<IssueSidebarViewModel>();

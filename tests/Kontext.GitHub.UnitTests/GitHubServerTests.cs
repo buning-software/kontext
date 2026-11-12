@@ -59,4 +59,13 @@ public class GitHubServerTests
     {
         Assert.That(new GitHubServer(host).ApiUri, Is.EqualTo(new Uri(api)));
     }
+
+    [TestCase("github.com", "https://api.github.com/graphql")]
+    [TestCase("github.corp.com", "https://github.corp.com/api/graphql")]
+    [TestCase("github.corp.com:8443", "https://github.corp.com:8443/api/graphql")]
+    [TestCase("acme.ghe.com", "https://api.acme.ghe.com/graphql")]
+    public void FindsTheGraphQlEndpointOfEveryKindOfServer(string host, string endpoint)
+    {
+        Assert.That(new GitHubServer(host).GraphQlUri, Is.EqualTo(new Uri(endpoint)));
+    }
 }

@@ -39,6 +39,7 @@ public class IssueSidebarAutoRefreshTests
             new InMemoryCollapsedRepositoryStore(),
             new FakeSessionStore(),
             new FakeTranscripts(),
+            new AutoCleanup(new FakeSessionClearer(), new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), new InMemoryAutoCleanupSetting { IsEnabled = false }),
             _errors,
             _clock,
             new RefreshOptions(interval));

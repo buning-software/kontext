@@ -15,7 +15,7 @@ internal sealed class GitHubDeviceLogin(GitHubOptions options, GitHubFormPoster 
     {
         var host = server?.Host ?? GitHubHosts.Default;
         var clientId = RequireClientId(server?.ClientId);
-        var body = await poster.PostAsync(DeviceCodeUrl(host), new Dictionary<string, string> { ["client_id"] = clientId, ["scope"] = "repo" }, cancellationToken);
+        var body = await poster.PostAsync(DeviceCodeUrl(host), new Dictionary<string, string> { ["client_id"] = clientId, ["scope"] = "repo workflow" }, cancellationToken);
 
         var challenge = DeviceFlowResponses.ParseDeviceCode(body, time.GetUtcNow());
         if (challenge.VerificationUri.Scheme != Uri.UriSchemeHttps

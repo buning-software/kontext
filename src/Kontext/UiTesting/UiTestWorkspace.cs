@@ -30,12 +30,12 @@ internal sealed class UiTestWorkspace : IWorkspaceChanges, IWorkspaceCommitter
     {
         lock (_lock)
         {
-            return Task.FromResult(new WorkingTreeChanges([], [.. _changes]));
+            return Task.FromResult(new WorkingTreeChanges([], (FileChange[])[.. _changes]));
         }
     }
 
     public Task<FileDiff> GetDiffAsync(string worktreePath, FileChange change, CancellationToken cancellationToken = default)
-        => Task.FromResult(new FileDiff(change.Path, [new DiffLine(DiffLineKind.Added, null, 1, $"changed {change.Path}")]));
+        => Task.FromResult(new FileDiff(change.Path, (DiffLine[])[new DiffLine(DiffLineKind.Added, null, 1, $"changed {change.Path}")]));
 
     public Task CommitAsync(string worktreePath, IReadOnlyList<FileChange> changes, string message, CancellationToken cancellationToken = default)
     {

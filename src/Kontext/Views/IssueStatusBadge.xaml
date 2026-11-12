@@ -5,7 +5,7 @@
 
     <UserControl.Resources>
         <ResourceDictionary>
-            <SolidColorBrush x:Key="ActiveSessionBrush" Color="#FDC007" />
+            <SolidColorBrush x:Key="NeedsInputBrush" Color="#FDC007" />
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="ClosedIssueBrush" Color="#8250DF" />
@@ -60,15 +60,15 @@
                 <VisualState x:Name="Running">
                     <VisualState.Setters>
                         <Setter Target="Dot.Visibility" Value="Visible" />
-                        <Setter Target="Dot.Stroke" Value="{StaticResource ActiveSessionBrush}" />
-                        <Setter Target="Dot.Fill" Value="{StaticResource ActiveSessionBrush}" />
+                        <Setter Target="Dot.Stroke" Value="{ThemeResource SystemFillColorAttentionBrush}" />
+                        <Setter Target="Dot.Fill" Value="{ThemeResource SystemFillColorAttentionBrush}" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="NeedsInput">
                     <VisualState.Setters>
                         <Setter Target="Dot.Visibility" Value="Visible" />
-                        <Setter Target="Dot.Stroke" Value="{ThemeResource SystemFillColorAttentionBrush}" />
-                        <Setter Target="Dot.Fill" Value="{ThemeResource SystemFillColorAttentionBrush}" />
+                        <Setter Target="Dot.Stroke" Value="{StaticResource NeedsInputBrush}" />
+                        <Setter Target="Dot.Fill" Value="{StaticResource NeedsInputBrush}" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Done">

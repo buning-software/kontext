@@ -9,7 +9,7 @@ public class ClaudeHookSettingsBuilderTests
     private static readonly TerminalSessionId Session = new(Guid.Parse("6d8f503c-c671-e387-7413-d0d074951f3a"));
     private static readonly Uri Address = new("http://127.0.0.1:50123/");
 
-    private static JsonElement Build() => JsonDocument.Parse(ClaudeHookSettingsBuilder.Build(Address, Session)).RootElement.GetProperty("hooks");
+    private static JsonElement Build() => JsonElement.Parse(ClaudeHookSettingsBuilder.Build(Address, Session)).GetProperty("hooks");
 
     [Test]
     public void PostsEveryEventToTheAddressOfThisSession()

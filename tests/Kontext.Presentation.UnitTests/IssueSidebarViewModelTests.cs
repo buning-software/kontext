@@ -17,9 +17,11 @@ public class IssueSidebarViewModelTests
     private InMemoryCollapsedRepositoryStore _collapsedStore = null!;
     private FakeSessionStore _sessionStore = null!;
     private FakeTranscripts _transcripts = null!;
+    private FakeSessionClearer _clearer = null!;
+    private InMemoryAutoCleanupSetting _autoCleanupSetting = null!;
 
     private IssueSidebarViewModel CreateSidebarWith(InMemoryHiddenRepositoryStore hiddenStore, InMemoryCollapsedRepositoryStore? collapsedStore = null) =>
-        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, collapsedStore ?? _collapsedStore, _sessionStore, _transcripts, _errors, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
+        new(_gitHub, _tracker, _finder, new WorkspaceIssues(_gitHub), hiddenStore, collapsedStore ?? _collapsedStore, _sessionStore, _transcripts, new AutoCleanup(_clearer, new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), _autoCleanupSetting), _errors, new FixedTimeProvider(DateTimeOffset.Parse("2025-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture)));
 
     [SetUp]
     public void CreateSidebar()
@@ -29,6 +31,8 @@ public class IssueSidebarViewModelTests
         _collapsedStore = new InMemoryCollapsedRepositoryStore();
         _sessionStore = new FakeSessionStore();
         _transcripts = new FakeTranscripts();
+        _clearer = new FakeSessionClearer();
+        _autoCleanupSetting = new InMemoryAutoCleanupSetting { IsEnabled = false };
         _tracker = new InMemoryIssueWorkTracker();
         _gitHub = new FakeGitHubService();
         _finder = new FakeExistingWorkspaceFinder();
@@ -500,6 +504,29 @@ public class IssueSidebarViewModelTests
         Assert.That(item.Status, Is.EqualTo(IssueWorkStatus.Done));
         Assert.That(item.State.WorktreePath, Is.EqualTo(@"C:\wt\7"));
         Assert.That(_sidebar.CountText, Is.EqualTo("3 open issues · 1 closed"));
+    }
+
+    [Test]
+    public async Task ClearsAClosedIssueInTheBackgroundWhenAutomaticCleanupIsOn()
+    {
+        _autoCleanupSetting.IsEnabled = true;
+        _gitHub.ClosedIssues.Add(Closed(7));
+        _finder.Found.Add(Workspace(7));
+
+        await Refresh();
+
+        Assert.That(_clearer.Cleared.Select(issue => issue.Number), Is.EqualTo(Expect.Seq(7)));
+    }
+
+    [Test]
+    public async Task KeepsAClosedIssueWhenAutomaticCleanupIsOff()
+    {
+        _gitHub.ClosedIssues.Add(Closed(7));
+        _finder.Found.Add(Workspace(7));
+
+        await Refresh();
+
+        Assert.That(_clearer.Cleared, Is.Empty);
     }
 
     [Test]

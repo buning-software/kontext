@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Kontext.Contracts;
 using Kontext.Domain;
+using Kontext.Kernel;
 
 namespace Kontext.Presentation;
 
@@ -11,7 +12,7 @@ namespace Kontext.Presentation;
 /// then polls, but only while <see cref="IsActive"/> and a <see cref="WorktreePath"/> are both set. Await continuations
 /// return to the thread that set those properties (the UI thread), so no dispatcher is needed.
 /// </summary>
-public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWorkspaceCommitter committer, ErrorBarViewModel errors, TimeProvider clock, GitChangesOptions options) : ObservableObject, IDisposable
+public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWorkspaceCommitter committer, IIssueBranchLinker linker, ErrorBarViewModel errors, TimeProvider clock, GitChangesOptions options) : ObservableObject, IDisposable
 {
     public const string CommittingText = "Committing…";
 
@@ -30,6 +31,9 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
 
     [ObservableProperty]
     public partial string? WorktreePath { get; set; }
+
+    /// <summary>The issue the worktree belongs to. After a commit, its branch is linked to this issue on GitHub.</summary>
+    public GitHubIssue? Issue { get; set; }
 
     [ObservableProperty]
     public partial bool IsActive { get; set; }
@@ -377,10 +381,17 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
         var message = CommitMessage.Trim();
         var files = selection.Select(change => change.Path).Distinct(StringComparer.Ordinal).Count();
         var noun = files == 1 ? "file" : "files";
+        var issue = Issue;
+        var worktreePath = WorktreePath;
+        KontextException? linkFailure = null;
 
         await RunActionAsync(
             CommittingText,
-            (path, token) => committer.CommitAsync(path, selection, message, token),
+            async (path, token) =>
+            {
+                await committer.CommitAsync(path, selection, message, token);
+                linkFailure = await TryLinkAsync(issue, path, token);
+            },
             () =>
             {
                 CommitMessage = string.Empty;
@@ -389,6 +400,29 @@ public sealed partial class GitChangesViewModel(IWorkspaceChanges changes, IWork
                 Rows = BuildRows(_last);
                 return string.Create(CultureInfo.InvariantCulture, $"Committed {files} {noun}.");
             });
+
+        if (linkFailure is not null && WorktreePath == worktreePath)
+        {
+            errors.ReportAction(new KontextException($"Committed, but the branch could not be linked to the issue. {linkFailure.Message}", linkFailure));
+        }
+    }
+
+    private async Task<KontextException?> TryLinkAsync(GitHubIssue? issue, string worktreePath, CancellationToken token)
+    {
+        if (issue is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            await linker.LinkAsync(issue, worktreePath, token);
+            return null;
+        }
+        catch (KontextException ex)
+        {
+            return ex;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanPush))]
