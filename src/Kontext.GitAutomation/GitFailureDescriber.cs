@@ -11,6 +11,11 @@ internal static partial class GitFailureDescriber
     {
         ArgumentNullException.ThrowIfNull(standardError);
 
+        if (standardError.Contains("without `workflow` scope", StringComparison.OrdinalIgnoreCase))
+        {
+            return WorkflowScopeMissing;
+        }
+
         if (ContainsAny(standardError, "non-fast-forward", "[rejected]", "fetch first", "failed to push some refs"))
         {
             return "Push rejected: the remote branch has commits you do not have. Pull or rebase, then push again.";
@@ -43,6 +48,8 @@ internal static partial class GitFailureDescriber
 
         return Fallback;
     }
+
+    public const string WorkflowScopeMissing = "GitHub refused the push because it changes workflow files (.github/workflows) and your sign-in lacks the workflow permission. Sign out of GitHub in Settings and sign in again to grant it. For GitHub Enterprise, add the workflow scope to your token.";
 
     public const string NotInstalled = "Git is not installed or could not be found. Install Git for Windows and make sure it is on your PATH.";
 

@@ -11,6 +11,12 @@ public class GitFailureDescriberTests
         => Assert.That(GitFailureDescriber.Describe(stderr), Is.EqualTo("Authentication failed. Sign in to GitHub again and retry."));
 
     [Test]
+    public void APushThatChangesWorkflowsWithoutTheWorkflowScopeAsksToSignInAgain()
+        => Assert.That(
+            GitFailureDescriber.Describe("To https://github.com/acme/app.git\n ! [remote rejected] HEAD -> feature (refusing to allow an OAuth App to create or update workflow `.github/workflows/release.yaml` without `workflow` scope)\nerror: failed to push some refs to 'https://github.com/acme/app.git'"),
+            Is.EqualTo(GitFailureDescriber.WorkflowScopeMissing));
+
+    [Test]
     public void AnOrganizationThatEnforcesSingleSignOnAsksToAuthorizeTheTokenForSso()
     {
         const string stderr = "remote: The 'Acme' organization has enabled or enforced SAML SSO.\nremote: To access this repository, visit https://acme.ghe.com/enterprises/acme/sso?authorization_request=ABC123 and try your request again.\nfatal: unable to access 'https://acme.ghe.com/Acme/app.git/': The requested URL returned error: 403";
