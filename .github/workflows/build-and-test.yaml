@@ -125,11 +125,22 @@ jobs:
       - name: UI test
         run: dotnet test --no-build --configuration Release --logger GitHubActions --filter "FullyQualifiedName~.UiTests."
 
+      - name: Collect recordings
+        if: always()
+        shell: pwsh
+        env:
+          KIND: ${{ inputs.record-all-tests && 'All' || 'Failed' }}
+        run: |
+          New-Item -ItemType Directory -Force recordings | Out-Null
+          Get-ChildItem tests -Recurse -Directory -Filter $env:KIND |
+            Where-Object { $_.Parent.Name -eq 'Recordings' } |
+            ForEach-Object { Copy-Item (Join-Path $_.FullName '*') recordings -Force }
+
       - name: Upload recordings
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ui-test-recordings
-          path: "**/TestResults/Recordings/${{ inputs.record-all-tests && 'All' || 'Failed' }}"
+          path: recordings
           if-no-files-found: ignore
           retention-days: 14
