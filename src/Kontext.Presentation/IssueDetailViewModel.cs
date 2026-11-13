@@ -25,7 +25,8 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
         IWorkspaceOpener opener,
         IIssueSessionRegistry registry,
         SelectionAutoStart autoStart,
-        GitChangesViewModel gitChanges)
+        GitChangesViewModel gitChanges,
+        PullRequestStatusViewModel pullRequest)
     {
         _coordinator = coordinator;
         _clearer = clearer;
@@ -34,6 +35,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
         _registry = registry;
         _autoStart = autoStart;
         GitChanges = gitChanges;
+        PullRequest = pullRequest;
 
         _registry.Changed += OnSessionChanged;
         _autoStart.PropertyChanged += OnAutoStartChanged;
@@ -53,6 +55,8 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
     public bool ShowIssueTab => SelectedTab == DetailTab.Issue;
 
     public GitChangesViewModel GitChanges { get; }
+
+    public PullRequestStatusViewModel PullRequest { get; }
 
     public bool HasSelection => Item is not null;
 
@@ -138,6 +142,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
         _autoStart.PropertyChanged -= OnAutoStartChanged;
         UnsubscribeFrom(Item);
         GitChanges.Dispose();
+        PullRequest.Dispose();
     }
 
     partial void OnSelectedTabChanged(DetailTab value) => SyncGitChanges();
@@ -245,6 +250,7 @@ public sealed partial class IssueDetailViewModel : ObservableObject, IDisposable
     private void Refresh()
     {
         SyncGitChanges();
+        PullRequest.Track(Item?.Issue, BranchName);
         OnPropertyChanged(string.Empty);
         ResumeCommand.NotifyCanExecuteChanged();
         OpenInCommand.NotifyCanExecuteChanged();

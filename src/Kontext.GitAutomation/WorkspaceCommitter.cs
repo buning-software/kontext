@@ -23,9 +23,17 @@ internal sealed class WorkspaceCommitter(IGitProcess git) : IWorkspaceCommitter
             throw new GitAutomationException("Nothing to commit: no files are selected.", 0, string.Empty);
         }
 
-        // Only the current paths are added: a rename's original path is already gone from the index and the worktree.
-        var added = changes.Select(change => change.Path).Distinct(StringComparer.Ordinal).ToList();
-        await git.RunCheckedAsync(worktreePath, [Literal, "add", "-A", "--", .. added], cancellationToken);
+        // Only the current paths are added: a rename's original path is already gone from the index and the worktree,
+        // and so is a staged deletion, which git add rejects as a pathspec that matches nothing. Both are committed as they are.
+        var added = changes
+            .Where(change => change is not { Status: FileChangeStatus.Deleted, IsStaged: true })
+            .Select(change => change.Path)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (added.Count > 0)
+        {
+            await git.RunCheckedAsync(worktreePath, [Literal, "add", "-A", "--", .. added], cancellationToken);
+        }
 
         // Exit code 0 means the selected paths have nothing staged, so a commit would fail or be empty.
         var staged = await git.RunAsync(worktreePath, [Literal, "diff", "--cached", "--quiet", "--", .. paths], cancellationToken);

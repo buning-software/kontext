@@ -22,6 +22,9 @@ internal sealed class UiTestGitHubService : IGitHubService
             ? Task.FromResult(issue)
             : Task.FromException<GitHubIssue>(new InvalidOperationException($"Issue {repository.DisplayName}#{number} is not in the UI test data."));
 
+    public Task<PullRequestStatus?> GetPullRequestStatusAsync(RepositoryRef repository, string branchName, CancellationToken cancellationToken = default) =>
+        Task.FromResult<PullRequestStatus?>(null);
+
     private static bool Same(RepositoryRef left, RepositoryRef right) =>
         string.Equals(left.DisplayName, right.DisplayName, StringComparison.OrdinalIgnoreCase);
 }

@@ -98,6 +98,16 @@ public class WorkspaceCommitterIntegrationTests
     }
 
     [Test]
+    public async Task CommitsAFileWhoseDeletionIsAlreadyStaged()
+    {
+        await Git("rm", "--", "keep.txt");
+
+        await _committer.CommitAsync(_repo, [await ChangeOf("keep.txt")], "Remove keep");
+
+        Assert.That(await Output("show", "--name-status", "--format=", "HEAD"), Is.EqualTo("D	keep.txt"));
+    }
+
+    [Test]
     public async Task CommitsARenameWithBothPaths()
     {
         await Git("mv", "keep.txt", "moved.txt");

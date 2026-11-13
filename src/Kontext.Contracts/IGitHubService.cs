@@ -12,4 +12,7 @@ public interface IGitHubService
     Task<IReadOnlyList<GitHubIssue>> GetIssuesAsync(RepositoryRef? repository = null, CancellationToken cancellationToken = default);
 
     Task<GitHubIssue> GetIssueAsync(RepositoryRef repository, int number, CancellationToken cancellationToken = default);
+
+    /// <summary>The newest pull request whose head is <paramref name="branchName"/> in <paramref name="repository"/>, with its workflow result, or null when there is none.</summary>
+    Task<PullRequestStatus?> GetPullRequestStatusAsync(RepositoryRef repository, string branchName, CancellationToken cancellationToken = default);
 }

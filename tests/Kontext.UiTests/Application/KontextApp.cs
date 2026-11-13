@@ -1,6 +1,8 @@
 using System.Reflection;
+using NUnit.Framework.Interfaces;
 using WinUia;
 using WinUia.Models;
+using WinUia.Recording;
 
 namespace Kontext.UiTests.Application;
 
@@ -25,7 +27,15 @@ public sealed class KontextApp : App
 
     protected override string ExecutablePath => BuiltExecutable;
 
-    protected override AppLaunchOptions DefaultOptions => new() { ShowPointer = true };
+    protected override AppLaunchOptions DefaultOptions => new()
+    {
+        ShowPointer = true,
+        Recording = new RecordingOptions
+        {
+            FileName = () => TestContext.CurrentContext.Test.FullName,
+            Failed = () => TestContext.CurrentContext.Result.Outcome.Status is TestStatus.Failed or TestStatus.Inconclusive,
+        },
+    };
 
     public static KontextApp Launch(TestDataDirectory data) => Launch<KontextApp>(data.LaunchOptions);
 

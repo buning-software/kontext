@@ -71,6 +71,18 @@ public sealed class FakeGitHubService : IGitHubService
     }
 
 
+    public PullRequestStatus? PullRequest { get; set; }
+
+    public Exception? PullRequestFailsWith { get; set; }
+
+    public int PullRequestCalls { get; private set; }
+
+    public Task<PullRequestStatus?> GetPullRequestStatusAsync(RepositoryRef repository, string branchName, CancellationToken cancellationToken = default)
+    {
+        PullRequestCalls++;
+        return PullRequestFailsWith is null ? Task.FromResult(PullRequest) : Task.FromException<PullRequestStatus?>(PullRequestFailsWith);
+    }
+
     public Task<GitHubIssue> GetIssueAsync(RepositoryRef repository, int number, CancellationToken cancellationToken = default)
     {
         var found = ClosedIssues.Concat(Issues).FirstOrDefault(issue => issue.Number == number && string.Equals(issue.Repository.FullName, repository.FullName, StringComparison.OrdinalIgnoreCase));
