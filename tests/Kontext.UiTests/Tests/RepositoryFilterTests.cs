@@ -8,7 +8,6 @@ public sealed class RepositoryFilterTests : KontextFixture
     [Test]
     public void HidingARepositoryRemovesItsGroupUntilTheFiltersAreCleared()
     {
-        Assert.Fail("Temporary failure to validate the recording artifact (issue #32). Remove before merging.");
         var filter = App.Sidebar.OpenFilter();
 
         filter.Hide(Memento);
