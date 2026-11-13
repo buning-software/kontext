@@ -64,6 +64,56 @@ internal sealed class GitHubService(GitHubClients clients) : IGitHubService
             ?? throw new GitHubException($"{repository.FullName}#{number} is a pull request, not an issue.");
     }
 
+    public async Task<PullRequestStatus?> GetPullRequestStatusAsync(RepositoryRef repository, string branchName, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(repository);
+        ArgumentException.ThrowIfNullOrWhiteSpace(branchName);
+
+        var client = clients.For(repository.Host);
+        var pulls = await OctokitCall.RunAsync(
+            () => client.PullRequest.GetAllForRepository(
+                repository.Owner,
+                repository.Name,
+                new PullRequestRequest
+                {
+                    State = ItemStateFilter.All,
+                    Head = $"{repository.Owner}:{branchName}",
+                    SortProperty = PullRequestSort.Created,
+                    SortDirection = SortDirection.Descending,
+                },
+                new ApiOptions { PageSize = 1, PageCount = 1 }),
+            cancellationToken);
+
+        if (pulls.Count == 0)
+        {
+            return null;
+        }
+
+        var pull = pulls[0];
+        var checks = await GetChecksAsync(client, repository, pull.Head.Sha, cancellationToken);
+        return new PullRequestStatus(pull.Number, new Uri(pull.HtmlUrl), StateOf(pull), checks);
+    }
+
+    private static PullRequestState StateOf(PullRequest pull) =>
+        pull.MergedAt is not null ? PullRequestState.Merged
+        : pull.State == ItemState.Closed ? PullRequestState.Closed
+        : pull.Draft ? PullRequestState.Draft
+        : PullRequestState.Open;
+
+    // The pull request is still worth showing when its checks cannot be read (a token without the scope, say).
+    private static async Task<ChecksState> GetChecksAsync(GitHubClient client, RepositoryRef repository, string sha, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await OctokitCall.RunAsync(() => client.Check.Run.GetAllForReference(repository.Owner, repository.Name, sha), cancellationToken);
+            return ChecksSummary.Of(response.CheckRuns);
+        }
+        catch (KontextException)
+        {
+            return ChecksState.None;
+        }
+    }
+
     private static GitHubClient CreateClient(string host, string accessToken)
     {
         var client = GitHubHosts.IsDefault(host)

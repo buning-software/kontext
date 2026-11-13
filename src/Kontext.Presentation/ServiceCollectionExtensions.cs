@@ -19,8 +19,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ErrorBarViewModel>();
         services.AddTransient<IssueSidebarViewModel>();
         services.AddSingleton(GitChangesOptions.Default);
+        services.AddSingleton(PullRequestStatusOptions.Default);
 
         services.AddTransient<GitChangesViewModel>();
+        services.AddTransient<PullRequestStatusViewModel>();
         services.AddTransient<IssueDetailViewModel>();
         services.AddTransient<GeneralSessionViewModel>();
         services.AddTransient<WorkspaceViewModel>();

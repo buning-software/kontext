@@ -34,7 +34,7 @@ public class IssueDetailViewModelTests
         _autoStart = new SelectionAutoStart(_coordinator, _tracker, new InMemoryIssueSessionRegistry(), _clock, new AutoStartOptions(TimeSpan.FromSeconds(1)));
         _workspaceChanges = new FakeWorkspaceChanges();
         var gitChanges = new GitChangesViewModel(_workspaceChanges, new FakeWorkspaceCommitter(), new FakeIssueBranchLinker(), new ErrorBarViewModel(), _clock, new GitChangesOptions(TimeSpan.FromSeconds(3)));
-        _detail = new IssueDetailViewModel(_coordinator, _clearer, _confirmation, _opener, _registry, _autoStart, gitChanges);
+        _detail = new IssueDetailViewModel(_coordinator, _clearer, _confirmation, _opener, _registry, _autoStart, gitChanges, new PullRequestStatusViewModel(new FakeGitHubService(), _clock, PullRequestStatusOptions.Default));
     }
 
     [TearDown]

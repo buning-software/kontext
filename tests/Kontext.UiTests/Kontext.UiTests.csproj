@@ -37,6 +37,7 @@
     </PackageReference>
     <PackageReference Include="NUnit3TestAdapter" />
     <PackageReference Include="WinUia" />
+    <PackageReference Include="WinUia.Recording" />
   </ItemGroup>
 
   <ItemGroup>

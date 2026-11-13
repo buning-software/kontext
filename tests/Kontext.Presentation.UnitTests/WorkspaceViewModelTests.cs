@@ -37,7 +37,7 @@ public class WorkspaceViewModelTests
 
         _sidebar = new IssueSidebarViewModel(gitHub, _tracker, new FakeExistingWorkspaceFinder(), new WorkspaceIssues(gitHub), new InMemoryHiddenRepositoryStore(), new InMemoryCollapsedRepositoryStore(), new FakeSessionStore(), new FakeTranscripts(), new AutoCleanup(new FakeSessionClearer(), new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), new InMemoryAutoCleanupSetting { IsEnabled = false }), Errors, _clock);
         _registry = new InMemoryIssueSessionRegistry();
-        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), _registry, _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), new FakeIssueBranchLinker(), Errors, _clock, GitChangesOptions.Default));
+        _detail = new IssueDetailViewModel(_coordinator, new FakeSessionClearer(), new FakeConfirmation(), new FakeWorkspaceOpener(), _registry, _autoStart, new GitChangesViewModel(new FakeWorkspaceChanges(), new FakeWorkspaceCommitter(), new FakeIssueBranchLinker(), Errors, _clock, GitChangesOptions.Default), new PullRequestStatusViewModel(new FakeGitHubService(), _clock, PullRequestStatusOptions.Default));
         _generalCoordinator = new FakeGeneralSessionCoordinator();
         _general = new GeneralSessionViewModel(_generalCoordinator);
         _workspace = new WorkspaceViewModel(_sidebar, _detail, _general, _autoStart, Errors);

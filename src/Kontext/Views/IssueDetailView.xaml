@@ -73,8 +73,18 @@
                         Margin="0,4,0,0"
                         Orientation="Horizontal"
                         Spacing="8">
-                        <views:IssueStatusBadge VerticalAlignment="Center" Status="{x:Bind ViewModel.Status, Mode=OneWay}" />
-                        <TextBlock VerticalAlignment="Center" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" />
+                        <HyperlinkButton
+                            Padding="0"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="Open pull request on GitHub"
+                            Content="{x:Bind ViewModel.PullRequest.Text, Mode=OneWay}"
+                            NavigateUri="{x:Bind ViewModel.PullRequest.Url, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.PullRequest.HasPullRequest, Mode=OneWay}" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                            Text="{x:Bind ViewModel.PullRequest.Text, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.PullRequest.HasNoPullRequest, Mode=OneWay}" />
                         <TextBlock
                             VerticalAlignment="Center"
                             Foreground="{ThemeResource TextFillColorTertiaryBrush}"
